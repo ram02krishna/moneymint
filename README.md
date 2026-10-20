@@ -6,18 +6,6 @@ It's basically an app where you can log your income and expenses, set budgets fo
 
 ---
 
-## What I learned building this
-
-- How JWT authentication works end-to-end (signing tokens, protecting routes, handling expiry)
-- How to structure a Node/Express backend with proper MVC separation (models, controllers, routes)
-- How to use Mongoose for database operations and schema validation
-- How to handle file uploads with Multer and store images on Cloudinary
-- How to generate Excel files using ExcelJS
-- How to use Chart.js inside React to make interactive data visualizations
-- How to implement security best practices like rate limiting, input validation, and helmet headers
-
----
-
 ## Features
 
 ### Authentication & User Management
