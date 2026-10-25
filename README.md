@@ -1,20 +1,8 @@
-## Expense Tracker
+## Spendora - Expense Tracker
 
 Hi! This is a full-stack expense tracker app I built using the MERN stack (MongoDB, Express, React, Node.js). I made this project to practice building a complete web application from scratch — including user auth, a REST API, database design, and a proper frontend with charts and data export features.
 
 It's basically an app where you can log your income and expenses, set budgets for different categories, see charts of your spending, and download reports as Excel or PDF files.
-
----
-
-## What I learned building this
-
-- How JWT authentication works end-to-end (signing tokens, protecting routes, handling expiry)
-- How to structure a Node/Express backend with proper MVC separation (models, controllers, routes)
-- How to use Mongoose for database operations and schema validation
-- How to handle file uploads with Multer and store images on Cloudinary
-- How to generate Excel files using ExcelJS
-- How to use Chart.js inside React to make interactive data visualizations
-- How to implement security best practices like rate limiting, input validation, and helmet headers
 
 ---
 
