@@ -15,7 +15,10 @@ const incomeRoutes = require("./routes/incomeRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const budgetRoutes = require("./routes/budgetRoutes");
 const transactionRoutes = require("./routes/transactionRoutes");
+<<<<<<< HEAD
 const goalRoutes = require("./routes/goalRoutes");
+=======
+>>>>>>> 27e5bca306b6bf527d8a4e62359317d6d501bbb6
 const globalErrorHandler = require("./middleware/errorMiddleware");
 const { sanitizeMongoParams } = require("./middleware/validationMiddleware");
 const connectDBMiddleware = require("./middleware/connectDBMiddleware");
@@ -122,7 +125,10 @@ app.use("/api/v1/income", incomeRoutes);
 app.use("/api/v1/dashboard", dashboardRoutes);
 app.use("/api/v1/budgets", budgetRoutes);
 app.use("/api/v1/transactions", transactionRoutes);
+<<<<<<< HEAD
 app.use("/api/v1/goals", goalRoutes);
+=======
+>>>>>>> 27e5bca306b6bf527d8a4e62359317d6d501bbb6
 
 // errors handled here
 app.use(globalErrorHandler);

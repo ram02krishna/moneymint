@@ -145,6 +145,7 @@ export const CHART_COLORS = [
   "#a855f7",
   "#0ea5e9",
 ];
+<<<<<<< HEAD
 
 // pull a readable message out of an axios error
 export const getErrorMessage = (error, fallback = "Something went wrong") => {
@@ -179,3 +180,5 @@ export const getProgressTone = (pct) => {
   if (pct >= 75) return { bar: "bg-amber-500", text: "text-amber-500" };
   return { bar: "bg-emerald-500", text: "text-emerald-500" };
 };
+=======
+>>>>>>> 27e5bca306b6bf527d8a4e62359317d6d501bbb6

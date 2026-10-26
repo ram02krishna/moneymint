@@ -28,6 +28,7 @@ It's basically an app where you can log your income and expenses, set budgets fo
 - Recent Transactions page with paginated history
 
 ### Budget Management
+<<<<<<< HEAD
 - Dedicated **Budgets** page: create, edit and delete budgets per category
 - Progress bars with colour states (on track / near limit / over budget), days left and recurring budgets
 - Filter by Active / Upcoming / Ended, plus a budget tracker widget on the dashboard
@@ -46,6 +47,10 @@ It's basically an app where you can log your income and expenses, set budgets fo
 - Refreshed navbar, sidebar and stat cards, greeting hero with quick actions
 - Toast notifications (replacing browser alerts on the new pages)
 - Reduced-motion support and better dark-mode contrast
+=======
+- Set monthly budgets for different categories
+- See visual indicators for how much of each budget you've used
+>>>>>>> 27e5bca306b6bf527d8a4e62359317d6d501bbb6
 
 ### Export & Reports
 - Download your transactions as a formatted Excel (.xlsx) file

@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 import { useLocation } from "react-router-dom";
+=======
+>>>>>>> 27e5bca306b6bf527d8a4e62359317d6d501bbb6
 import React, { useEffect, useState, useCallback, useContext } from "react";
 import { UserContext } from "../../context/UserContextDefinition";
 import DashboardLayout from "../../components/layouts/DashboardLayout";
@@ -19,8 +22,12 @@ let Income = () => {
   // State variables for income data, loading state, and modal visibility
   const [incomeData, setIncomeData] = useState([]);
   const [loading, setLoading] = useState(true);
+<<<<<<< HEAD
   const location = useLocation();
   const [openAddIncomeModal, setOpenAddIncomeModal] = useState(() => !!location.state?.openAdd);
+=======
+  const [openAddIncomeModal, setOpenAddIncomeModal] = useState(false);
+>>>>>>> 27e5bca306b6bf527d8a4e62359317d6d501bbb6
   const [error, setError] = useState(null);
   const [editingIncome, setEditingIncome] = useState(null);
   const { selectedMonth, setSelectedMonth } = useContext(UserContext);

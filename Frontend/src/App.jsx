@@ -11,7 +11,10 @@ import { Analytics } from "@vercel/analytics/react";
 import UserProvider from "./context/UserContext.jsx";
 import { UserContext } from "./context/UserContextDefinition";
 import { ThemeProvider } from "./context/ThemeContext.jsx";
+<<<<<<< HEAD
 import { ToastProvider } from "./context/ToastContext.jsx";
+=======
+>>>>>>> 27e5bca306b6bf527d8a4e62359317d6d501bbb6
 
 import ErrorBoundary from "./components/ErrorBoundary";
 import LoadingSpinner from "./components/LoadingSpinner";
@@ -31,8 +34,11 @@ let RecentTransactionsPage = lazy(
 let MonthlyAnalyticsPage = lazy(
   () => import("./pages/Dashboard/MonthlyAnalytics"),
 );
+<<<<<<< HEAD
 let Budgets = lazy(() => import("./pages/Dashboard/Budgets"));
 let Goals = lazy(() => import("./pages/Dashboard/Goals"));
+=======
+>>>>>>> 27e5bca306b6bf527d8a4e62359317d6d501bbb6
 
 // wrapper for protected routes
 let ProtectedRoute = ({ Component }) => {
@@ -51,7 +57,10 @@ let App = () => {
     <ErrorBoundary>
       <UserProvider>
         <ThemeProvider>
+<<<<<<< HEAD
           <ToastProvider>
+=======
+>>>>>>> 27e5bca306b6bf527d8a4e62359317d6d501bbb6
           <div>
             <Router>
               <ErrorBoundary>
@@ -86,6 +95,7 @@ let App = () => {
                       element={<ProtectedRoute Component={Expense} />}
                     />
                     <Route
+<<<<<<< HEAD
                       path="/budgets"
                       element={<ProtectedRoute Component={Budgets} />}
                     />
@@ -94,6 +104,8 @@ let App = () => {
                       element={<ProtectedRoute Component={Goals} />}
                     />
                     <Route
+=======
+>>>>>>> 27e5bca306b6bf527d8a4e62359317d6d501bbb6
                       path="/settings"
                       element={<ProtectedRoute Component={Settings} />}
                     />
@@ -115,7 +127,10 @@ let App = () => {
             </Router>
             <Analytics />
           </div>
+<<<<<<< HEAD
           </ToastProvider>
+=======
+>>>>>>> 27e5bca306b6bf527d8a4e62359317d6d501bbb6
         </ThemeProvider>
       </UserProvider>
     </ErrorBoundary>
