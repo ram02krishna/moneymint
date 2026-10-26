@@ -20,13 +20,10 @@ import Last30DaysExpenses from "./Last30DaysExpenses.jsx";
 import RecentIncomeWithChart from "../../components/Dashboard/RecentIncomeWithChart";
 import RecentIncome from "../../components/Dashboard/RecentIncome";
 import MonthSelector from "../../components/Dashboard/MonthSelector";
-<<<<<<< HEAD
 import InsightsCard from "../../components/Dashboard/InsightsCard";
 import BudgetSnapshot from "../../components/Dashboard/BudgetSnapshot";
 import GoalsSnapshot from "../../components/Dashboard/GoalsSnapshot";
 import { LuPlus, LuPiggyBank } from "react-icons/lu";
-=======
->>>>>>> 27e5bca306b6bf527d8a4e62359317d6d501bbb6
 
 // Home page
 let Home = () => {
@@ -34,12 +31,8 @@ let Home = () => {
   let [dashboardData, setDashboardData] = useState(null);
   let [monthlyData, setMonthlyData] = useState(null);
   let [loading, setLoading] = useState(false);
-<<<<<<< HEAD
   let { user, updateUser, selectedMonth, setSelectedMonth } =
     useContext(UserContext);
-=======
-  let { updateUser, selectedMonth, setSelectedMonth } = useContext(UserContext);
->>>>>>> 27e5bca306b6bf527d8a4e62359317d6d501bbb6
 
   // Format month to YYYY-MM format
   let getFormattedMonth = (date) => {
@@ -108,7 +101,6 @@ let Home = () => {
     year: "numeric",
   });
 
-<<<<<<< HEAD
   const hour = new Date().getHours();
   const greeting =
     hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
@@ -155,15 +147,6 @@ let Home = () => {
             </div>
           </div>
         </div>
-=======
-  return (
-    <DashboardLayout activeMenu="Dashboard">
-      <div className="w-full max-w-[1400px] mx-auto">
-        {/* Page Title */}
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-          Dashboard
-        </h1>
->>>>>>> 27e5bca306b6bf527d8a4e62359317d6d501bbb6
 
         {/* Month Selector */}
         <div className="mb-8">
@@ -209,7 +192,6 @@ let Home = () => {
           />
         </div>
 
-<<<<<<< HEAD
         {/* Insights and budgets */}
         <div className="stagger-children grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <InsightsCard
@@ -221,8 +203,6 @@ let Home = () => {
           <BudgetSnapshot />
         </div>
 
-=======
->>>>>>> 27e5bca306b6bf527d8a4e62359317d6d501bbb6
         {/* Middle section with lists and overview */}
         <div className="stagger-children delay-150 grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Left Column: Transactions & Income lists */}
@@ -300,14 +280,11 @@ let Home = () => {
             }
           />
         </div>
-<<<<<<< HEAD
 
         {/* Savings goals */}
         <div className="mb-8">
           <GoalsSnapshot />
         </div>
-=======
->>>>>>> 27e5bca306b6bf527d8a4e62359317d6d501bbb6
       </div>
     </DashboardLayout>
   );

@@ -149,7 +149,6 @@ const validateBudget = [
   }),
 ];
 
-<<<<<<< HEAD
 // validate savings goal
 const validateGoal = [
   body("title")
@@ -192,8 +191,6 @@ const validateContribution = [
     .escape(),
 ];
 
-=======
->>>>>>> 27e5bca306b6bf527d8a4e62359317d6d501bbb6
 // validate registration
 const validateRegister = [
   body("fullName")
@@ -320,11 +317,8 @@ module.exports = {
   validateIncome,
   validateExpense,
   validateBudget,
-<<<<<<< HEAD
   validateGoal,
   validateContribution,
-=======
->>>>>>> 27e5bca306b6bf527d8a4e62359317d6d501bbb6
   validateRegister,
   validateLogin,
   validateChangePassword,

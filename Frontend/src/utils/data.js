@@ -6,11 +6,8 @@ import {
   LuSettings,
   LuArrowRightLeft,
   LuTrendingUp,
-<<<<<<< HEAD
   LuPiggyBank,
   LuTarget,
-=======
->>>>>>> 27e5bca306b6bf527d8a4e62359317d6d501bbb6
 } from "react-icons/lu";
 
 export let SIDE_MENU_DATA = [
@@ -46,7 +43,6 @@ export let SIDE_MENU_DATA = [
   },
   {
     id: "06",
-<<<<<<< HEAD
     label: "Budgets",
     icon: LuPiggyBank,
     path: "/budgets",
@@ -61,18 +57,12 @@ export let SIDE_MENU_DATA = [
   },
   {
     id: "08",
-=======
->>>>>>> 27e5bca306b6bf527d8a4e62359317d6d501bbb6
     label: "Settings",
     icon: LuSettings,
     path: "/settings",
   },
   {
-<<<<<<< HEAD
     id: "09",
-=======
-    id: "07",
->>>>>>> 27e5bca306b6bf527d8a4e62359317d6d501bbb6
     label: "Logout",
     icon: LuLogOut,
     path: "/logout",

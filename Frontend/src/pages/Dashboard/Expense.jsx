@@ -1,7 +1,4 @@
-<<<<<<< HEAD
 import { useLocation } from "react-router-dom";
-=======
->>>>>>> 27e5bca306b6bf527d8a4e62359317d6d501bbb6
 import React, { useEffect, useState, useCallback, useContext } from "react";
 import { UserContext } from "../../context/UserContextDefinition";
 import DashboardLayout from "../../components/layouts/DashboardLayout";
@@ -21,12 +18,8 @@ import { getCachedData, setCachedData } from "../../utils/apiCache";
 let Expense = () => {
   const [expenseData, setExpenseData] = useState([]);
   const [loading, setLoading] = useState(true);
-<<<<<<< HEAD
   const location = useLocation();
   const [openAddExpenseModal, setOpenAddExpenseModal] = useState(() => !!location.state?.openAdd);
-=======
-  const [openAddExpenseModal, setOpenAddExpenseModal] = useState(false);
->>>>>>> 27e5bca306b6bf527d8a4e62359317d6d501bbb6
   const [error, setError] = useState(null);
   const [editingExpense, setEditingExpense] = useState(null);
   const { selectedMonth, setSelectedMonth } = useContext(UserContext);

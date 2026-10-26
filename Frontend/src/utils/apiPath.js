@@ -38,7 +38,6 @@ export let API_PATHS = {
     DELETE_BUDGET: (budgetId) => `/api/v1/budgets/${budgetId}`,
     GET_REPORT: "/api/v1/budgets/report/actual-vs-budget",
   },
-<<<<<<< HEAD
   GOALS: {
     GET_ALL_GOALS: "/api/v1/goals",
     ADD_GOAL: "/api/v1/goals",
@@ -46,8 +45,6 @@ export let API_PATHS = {
     DELETE_GOAL: (goalId) => `/api/v1/goals/${goalId}`,
     CONTRIBUTE: (goalId) => `/api/v1/goals/${goalId}/contribute`,
   },
-=======
->>>>>>> 27e5bca306b6bf527d8a4e62359317d6d501bbb6
   IMAGE: {
     UPLOAD_IMAGE: "/api/v1/auth/upload-image",
   },
