@@ -17,7 +17,7 @@ const AuthBranding = () => {
         className="relative z-10"
       >
         <h1 className="text-5xl font-bold text-white mb-6 tracking-tight">
-          Expense Tracker
+          MoneyMint
         </h1>
         <p className="text-xl text-purple-100 leading-relaxed max-w-md mx-auto">
           Take control of your finances with our intuitive and powerful expense

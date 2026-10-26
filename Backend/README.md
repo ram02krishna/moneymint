@@ -1,6 +1,6 @@
-# Expense Tracker Backend
+# MoneyMint Backend
 
-This is the backend API for my Expense Tracker app, built with Node.js and Express. It connects to a MongoDB database to store users, expenses, and incomes.
+This is the backend API for my MoneyMint app, built with Node.js and Express. It connects to a MongoDB database to store users, expenses, and incomes.
 
 ## What it does
 

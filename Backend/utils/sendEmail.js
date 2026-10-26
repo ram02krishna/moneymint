@@ -5,7 +5,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const sendEmail = async (options) => {
   try {
     const data = await resend.emails.send({
-      from: `Expense Tracker <expense_tracker@ram02krishna.me>`,
+      from: `MoneyMint <expense_tracker@ram02krishna.me>`,
       to: options.email,
       subject: options.subject,
       text: options.message,

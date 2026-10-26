@@ -1,4 +1,4 @@
-## Spendora - Expense Tracker
+## MoneyMint - Expense Tracker
 
 Hi! This is a full-stack expense tracker app I built using the MERN stack (MongoDB, Express, React, Node.js). I made this project to practice building a complete web application from scratch — including user auth, a REST API, database design, and a proper frontend with charts and data export features.
 

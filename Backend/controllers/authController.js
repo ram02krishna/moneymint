@@ -150,7 +150,7 @@ exports.forgotPassword = asyncHandler(async (req, res, next) => {
               <!-- Header -->
               <tr>
                 <td style="background-color: #4F46E5; padding: 32px 40px; text-align: center;">
-                  <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">Expense Tracker</h1>
+                  <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">MoneyMint</h1>
                 </td>
               </tr>
               
@@ -159,7 +159,7 @@ exports.forgotPassword = asyncHandler(async (req, res, next) => {
                 <td style="padding: 40px;">
                   <h2 style="color: #111827; margin-top: 0; margin-bottom: 16px; font-size: 20px; font-weight: 600;">Reset Your Password</h2>
                   <p style="color: #4b5563; font-size: 16px; line-height: 24px; margin-top: 0; margin-bottom: 24px;">
-                    We received a request to reset the password for your Expense Tracker account. Use the one-time password (OTP) below to proceed.
+                    We received a request to reset the password for your MoneyMint account. Use the one-time password (OTP) below to proceed.
                   </p>
                   
                   <!-- OTP Box -->
@@ -187,7 +187,7 @@ exports.forgotPassword = asyncHandler(async (req, res, next) => {
               <tr>
                 <td style="background-color: #f9fafb; border-top: 1px solid #e5e7eb; padding: 24px 40px; text-align: center;">
                   <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-                    &copy; ${new Date().getFullYear()} Expense Tracker. All rights reserved.
+                    &copy; ${new Date().getFullYear()} MoneyMint. All rights reserved.
                   </p>
                 </td>
               </tr>

@@ -34,8 +34,7 @@ const Navbar = ({ activeMenu }) => {
           )}
         </button>
         <h2 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
-          <span className="text-purple-600 dark:text-purple-500">Expense</span>{" "}
-          Tracker
+          <span className="text-purple-600 dark:text-purple-500">Money</span>Mint
         </h2>
       </div>
 
