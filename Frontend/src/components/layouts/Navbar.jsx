@@ -42,7 +42,11 @@ const Navbar = ({ activeMenu }) => {
           className="flex items-center gap-2.5 cursor-pointer"
           aria-label="Go to dashboard"
         >
-          <span className="brand-mark">M</span>
+          <img
+            src="/favicon.svg"
+            alt="MoneyMint Logo"
+            className="w-9 h-9 rounded-xl shadow-sm object-contain"
+          />
           <h2 className="text-xl font-extrabold text-gray-900 dark:text-white tracking-tight">
             <span className="text-purple-600 dark:text-purple-400">Money</span>
             Mint
