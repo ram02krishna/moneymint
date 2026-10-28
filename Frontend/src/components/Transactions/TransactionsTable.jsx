@@ -1,6 +1,7 @@
 import React from "react";
 import moment from "moment";
 import { LuPencil, LuTrash2 } from "react-icons/lu";
+import { emojiFor } from "../../utils/helper";
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat("en-IN", {
@@ -62,30 +63,19 @@ const TransactionsTable = ({
             >
               <td className="px-3 md:px-6 py-4 whitespace-nowrap">
                 <div className="flex items-center">
-                  <div className="flex-shrink-0 h-10 w-10 text-2xl flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
-                    {item.icon ? (
-                      item.icon.includes("/") || item.icon.includes(".") ? (
-                        <img
-                          src={item.icon}
-                          alt={item.title}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.target.style.display = "none";
-                            e.target.parentNode.innerText = "💰";
-                          }}
-                        />
-                      ) : (
-                        <span>{item.icon}</span>
-                      )
-                    ) : (
-                      <span>
-                        {type === "expense" ||
-                        item.type === "expense" ||
-                        (!item.source && !item.type && !type)
-                          ? "💸"
-                          : "💰"}
-                      </span>
-                    )}
+                  <div
+                    className={`flex-shrink-0 h-10 w-10 text-xl flex items-center justify-center rounded-xl ${
+                      item.type === "income" || (!item.type && (type === "income" || item.source))
+                        ? "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400"
+                        : "bg-rose-500/10 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400"
+                    }`}
+                  >
+                    <span>
+                      {emojiFor(
+                        `${item.category || item.source || ""} ${item.title || ""}`,
+                        item.type || type || (item.source ? "income" : "expense")
+                      )}
+                    </span>
                   </div>
                   <div className="ml-3 md:ml-4 max-w-[140px] sm:max-w-[200px] md:max-w-none">
                     <div className="text-sm font-medium text-gray-900 dark:text-white truncate">

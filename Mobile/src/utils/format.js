@@ -33,19 +33,19 @@ export const progressTone = (pct, colors) =>
 
 // small emoji per category so lists feel alive without image URLs
 const EMOJI = [
-  [/food|dining|restaurant|grocer|swiggy|zomato/i, "🍔"],
-  [/transport|fuel|petrol|uber|ola|cab|metro|bus/i, "🚌"],
-  [/shop|cloth|amazon|flipkart/i, "🛍️"],
-  [/rent|home|house|emi/i, "🏠"],
-  [/bill|electric|water|internet|recharge|phone/i, "💡"],
-  [/entertain|movie|netflix|game/i, "🎬"],
-  [/health|medic|doctor|pharm/i, "💊"],
-  [/educat|course|book|school|fee/i, "🎓"],
-  [/travel|trip|flight|hotel/i, "✈️"],
-  [/salary|wage|job/i, "💼"],
-  [/freelance|business|client/i, "💻"],
-  [/invest|stock|mutual|interest|dividend/i, "📈"],
-  [/gift|bonus/i, "🎁"],
+  [/food|dining|restaurant|grocer|swiggy|zomato|cafe|coffee|lunch|dinner|snack/i, "🍔"],
+  [/transport|fuel|petrol|diesel|uber|ola|cab|metro|bus|auto|taxi/i, "🚌"],
+  [/shop|cloth|amazon|flipkart|myntra|store|mall/i, "🛍️"],
+  [/rent|home|house|flat|room|pg|emi/i, "🏠"],
+  [/bill|electric|water|gas|internet|wifi|recharge|phone|utility/i, "💡"],
+  [/entertain|movie|netflix|prime|hotstar|game|cinema/i, "🎬"],
+  [/health|medic|doctor|pharm|hospital|gym|fitness/i, "💊"],
+  [/educat|course|book|school|college|fee|tuition/i, "🎓"],
+  [/travel|trip|flight|hotel|vacation|tour/i, "✈️"],
+  [/salary|wage|job|payroll|stipend/i, "💼"],
+  [/freelance|business|client|project/i, "💻"],
+  [/invest|stock|mutual|interest|dividend|crypto/i, "📈"],
+  [/gift|bonus|cashback|reward/i, "🎁"],
 ];
 export const emojiFor = (text = "", type) => {
   for (const [re, e] of EMOJI) if (re.test(text)) return e;
