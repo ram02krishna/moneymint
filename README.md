@@ -27,6 +27,14 @@ It's basically an app where you can log your income and expenses, set budgets fo
 - Filter transactions by month
 - Recent Transactions page with paginated history
 
+### Shared Expenses / Splitwise-style groups (new)
+- Create expense groups and add existing MoneyMint users by account email.
+- Record shared bills, choose who paid, and select participating members.
+- Split bills equally, by exact amounts, percentages, or weighted shares. All allocations and balances use integer cents with deterministic rounding.
+- View each member's net balance and simplified suggested repayments, including full or partial settlements.
+- Keep a complete group activity history for bills and settlements. Shared ledger entries are separate from personal expenses, so personal reports, budgets, and dashboards do not double-count shared spending.
+- Available in the web sidebar and in the mobile app under **More → Split expenses**.
+
 ### Budget Management
 - Dedicated **Budgets** page: create, edit and delete budgets per category
 - Progress bars with colour states (on track / near limit / over budget), days left and recurring budgets
@@ -41,6 +49,11 @@ It's basically an app where you can log your income and expenses, set budgets fo
 ### Smart Insights (new)
 - Savings rate, biggest spending category, daily average and month-end projection
 - Largest single expense of the month
+
+### Android app (new)
+- `Mobile/` is a React Native (Expo) app that uses the **same backend** as the web app
+- Includes dashboard charts, Monthly Analytics with 12-month trends, one-tap month picker, search, Excel/PDF export and profile photo upload
+- See `Mobile/README.md` for setup and APK build steps
 
 ### UI
 - Refreshed navbar, sidebar and stat cards, greeting hero with quick actions
@@ -107,7 +120,9 @@ Expense_Tracker/
 │   │   ├── expenseRoutes.js
 │   │   ├── budgetRoutes.js
 │   │   ├── dashboardRoutes.js
-│   │   └── transactionRoutes.js
+│   │   ├── transactionRoutes.js
+│   │   └── splitRoutes.js
+│   ├── services/               # Shared ledger and cent-accurate split calculations
 │   ├── utils/                  # PDF and Excel generation helpers
 │   ├── .env.example
 │   ├── server.js
@@ -290,6 +305,20 @@ All routes are prefixed with `/api/v1`. Protected routes need an `Authorization:
 | Method | Endpoint | Protected | Description |
 |---|---|---|---|
 | GET | `/` | Yes | Get dashboard summary |
+
+### Shared expense splitting — `/api/v1/splits`
+
+All endpoints below require authentication. Group data is only visible to group members.
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/friends/search?email=...` | Find an existing MoneyMint account by exact email |
+| GET | `/groups` | List groups the current user belongs to, including their net balances |
+| POST | `/groups` | Create a group (optional `memberEmails` array) |
+| GET | `/groups/:id` | Get group members, bills, settlements, balances, repayment suggestions and history |
+| POST | `/groups/:id/members` | Add an existing MoneyMint account by email |
+| POST | `/groups/:id/expenses` | Record a shared bill with payer, participants and split method (`equal`, `exact`, `percentage`, `shares`) |
+| POST | `/groups/:id/settlements` | Record a full or partial payment between group members |
 
 ### Transactions — `/api/v1/transactions`
 

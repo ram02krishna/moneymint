@@ -48,6 +48,14 @@ export let API_PATHS = {
   IMAGE: {
     UPLOAD_IMAGE: "/api/v1/auth/upload-image",
   },
+  SPLITS: {
+    GROUPS: "/api/v1/splits/groups",
+    GROUP: (groupId) => `/api/v1/splits/groups/${groupId}`,
+    ADD_MEMBER: (groupId) => `/api/v1/splits/groups/${groupId}/members`,
+    ADD_EXPENSE: (groupId) => `/api/v1/splits/groups/${groupId}/expenses`,
+    SETTLE: (groupId) => `/api/v1/splits/groups/${groupId}/settlements`,
+    SEARCH_FRIEND: "/api/v1/splits/friends/search",
+  },
   TRANSACTIONS: {
     GET_ALL_TRANSACTIONS: "/api/v1/transactions",
     DOWNLOAD_EXCEL: "/api/v1/transactions/download-excel",

@@ -8,6 +8,7 @@ import {
   LuTrendingUp,
   LuPiggyBank,
   LuTarget,
+  LuUsers,
 } from "react-icons/lu";
 
 export let SIDE_MENU_DATA = [
@@ -50,19 +51,26 @@ export let SIDE_MENU_DATA = [
   },
   {
     id: "07",
+    label: "Split Expenses",
+    icon: LuUsers,
+    path: "/splits",
+    isNew: true,
+  },
+  {
+    id: "08",
     label: "Goals",
     icon: LuTarget,
     path: "/goals",
     isNew: true,
   },
   {
-    id: "08",
+    id: "09",
     label: "Settings",
     icon: LuSettings,
     path: "/settings",
   },
   {
-    id: "09",
+    id: "10",
     label: "Logout",
     icon: LuLogOut,
     path: "/logout",

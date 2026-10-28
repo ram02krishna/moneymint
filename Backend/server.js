@@ -16,6 +16,7 @@ const dashboardRoutes = require("./routes/dashboardRoutes");
 const budgetRoutes = require("./routes/budgetRoutes");
 const transactionRoutes = require("./routes/transactionRoutes");
 const goalRoutes = require("./routes/goalRoutes");
+const splitRoutes = require("./routes/splitRoutes");
 const globalErrorHandler = require("./middleware/errorMiddleware");
 const { sanitizeMongoParams } = require("./middleware/validationMiddleware");
 const connectDBMiddleware = require("./middleware/connectDBMiddleware");
@@ -123,6 +124,7 @@ app.use("/api/v1/dashboard", dashboardRoutes);
 app.use("/api/v1/budgets", budgetRoutes);
 app.use("/api/v1/transactions", transactionRoutes);
 app.use("/api/v1/goals", goalRoutes);
+app.use("/api/v1/splits", splitRoutes);
 
 // errors handled here
 app.use(globalErrorHandler);

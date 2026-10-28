@@ -6,7 +6,8 @@ This is the backend API for my MoneyMint app, built with Node.js and Express. It
 
 - Handles user signup, login, and profile updates using JWT for security.
 - Handles password resets with email links using Resend.
-- Manages all the CRUD (Create, Read, Update, Delete) operations for expenses, incomes, and budgets.
+- Manages personal expenses, income, budgets, goals, and the shared-expense ledger.
+- Supports group membership, four bill-splitting modes, cent-accurate net balances, suggested repayments, full/partial settlements, and transaction history. Shared expenses are stored separately from personal expenses.
 - Sends data to the frontend so it can display charts and dashboards.
 - Uploads profile pictures to Cloudinary.
 
@@ -40,7 +41,9 @@ This is the backend API for my MoneyMint app, built with Node.js and Express. It
    FRONTEND_URL=http://localhost:5173
    ```
 
-3. Run the server:
+3. Run the calculation tests with `npm test`.
+
+4. Run the server:
    ```bash
    npm run dev
    ```

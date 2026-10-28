@@ -1,0 +1,290 @@
+import React, { useCallback, useMemo, useState } from "react";
+import { Pressable, Text, View, useWindowDimensions } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "../theme";
+import { useAuth } from "../context/AuthContext";
+import { Badge, Card, EmptyState, Loading, MonthSwitcher, ProgressBar, Screen, SectionTitle, StatTile } from "../components/ui";
+import TransactionRow from "../components/TransactionRow";
+import { BarChart, DonutChart, Legend } from "../components/charts";
+import client from "../api/client";
+import { API_PATHS } from "../api/paths";
+import { capitalize, inr, monthKey, monthLabel, pad, progressTone, toDateString } from "../utils/format";
+
+export default function DashboardScreen({ navigation }) {
+  const { colors } = useTheme();
+  const { user } = useAuth();
+  const [month, setMonth] = useState(new Date());
+  const [summary, setSummary] = useState(null);
+  const [budgets, setBudgets] = useState([]);
+  const [goals, setGoals] = useState([]);
+  const [overview, setOverview] = useState(null);
+  const { width } = useWindowDimensions();
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      const [s, b, g, o] = await Promise.allSettled([
+        client.get(`${API_PATHS.DASHBOARD.GET_MONTHLY_SUMMARY}?month=${monthKey(month)}`),
+        client.get(API_PATHS.BUDGET.REPORT),
+        client.get(API_PATHS.GOALS.ROOT),
+        client.get(API_PATHS.DASHBOARD.GET_DATA),
+      ]);
+      if (o.status === "fulfilled") setOverview(o.value.data.data);
+      if (s.status === "fulfilled") {
+        setSummary(s.value.data.data);
+        setFailed(false);
+      } else setFailed(true);
+
+      if (b.status === "fulfilled") {
+        const now = new Date();
+        setBudgets(
+          (b.value.data.data.report || [])
+            .filter((x) => {
+              const end = new Date(x.endDate);
+              end.setHours(23, 59, 59, 999);
+              return now >= new Date(x.startDate) && now <= end;
+            })
+            .map((x) => ({ ...x, pct: x.budgetAmount ? (x.actualSpent / x.budgetAmount) * 100 : 0 }))
+            .sort((x, y) => y.pct - x.pct),
+        );
+      }
+      if (g.status === "fulfilled") setGoals(g.value.data.data.goals || []);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [month]);
+
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
+
+  const income = summary?.totalIncome || 0;
+  const expense = summary?.totalExpense || 0;
+  const savings = summary?.totalSavings ?? income - expense;
+  const tx = summary?.monthlyTransactions || [];
+
+  // same insight logic as the web dashboard
+  const insights = useMemo(() => {
+    const out = [];
+    if (income > 0) {
+      const rate = ((income - expense) / income) * 100;
+      out.push(
+        rate >= 20
+          ? { icon: "happy-outline", tone: colors.success, title: "Healthy savings rate", text: `You kept ${Math.round(rate)}% of your income.` }
+          : rate >= 0
+            ? { icon: "alert-circle-outline", tone: colors.warn, title: "Room to save more", text: `You're saving ${Math.round(rate)}%. Aim for 20%+.` }
+            : { icon: "warning-outline", tone: colors.danger, title: "Spending exceeds income", text: `${inr(expense - income)} more than you earned.` },
+      );
+    }
+    const top = (summary?.expenseByCategory || [])[0];
+    if (top && expense > 0)
+      out.push({
+        icon: "bag-handle-outline",
+        tone: colors.primary,
+        title: `${capitalize(top._id)} leads your spending`,
+        text: `${inr(top.totalAmount)} — ${Math.round((top.totalAmount / expense) * 100)}% of expenses.`,
+      });
+    if (expense > 0) {
+      const now = new Date();
+      const dim = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+      const isCurrent = month.getMonth() === now.getMonth() && month.getFullYear() === now.getFullYear();
+      const avg = expense / (isCurrent ? Math.max(1, now.getDate()) : dim);
+      out.push({
+        icon: "calendar-outline",
+        tone: colors.primary,
+        title: `About ${inr(Math.round(avg))} per day`,
+        text: isCurrent ? `At this pace: ~${inr(Math.round(avg * dim))} by month end.` : "Average daily spend this month.",
+      });
+    }
+    return out;
+  }, [summary, income, expense, month, colors]);
+
+  const overviewData = useMemo(() => {
+    if (!overview) return [];
+    const inc = overview.totalIncome || 0;
+    const exp = overview.totalExpense || 0;
+    return [
+      { name: "Total balance", value: Math.max(0, inc - exp), color: "#875CF5" },
+      { name: "Total expenses", value: exp, color: "#FA2C37" },
+      { name: "Total income", value: inc, color: "#FF6900" },
+    ].filter((d) => d.value > 0);
+  }, [overview]);
+
+  const last30 = useMemo(() => {
+    const byDay = {};
+    (overview?.expenseLast30Days || []).forEach((t) => {
+      const k = toDateString(t.date);
+      byDay[k] = (byDay[k] || 0) + (t.amount || 0);
+    });
+    const days = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const k = toDateString(d);
+      days.push({ label: `${d.getDate()}/${pad(d.getMonth() + 1)}`, value: byDay[k] || 0 });
+    }
+    return days;
+  }, [overview]);
+
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const firstName = user?.fullName?.split(" ")[0] || "there";
+  const maxCat = Math.max(1, ...(summary?.expenseByCategory || []).map((c) => c.totalAmount));
+
+  return (
+    <Screen refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} bottomPad={32}>
+      {/* hero */}
+      <View style={{ backgroundColor: colors.primary, borderRadius: 26, padding: 20, marginBottom: 16, overflow: "hidden" }}>
+        <View style={{ position: "absolute", right: -40, top: -50, width: 170, height: 170, borderRadius: 85, backgroundColor: "rgba(255,255,255,0.12)" }} />
+        <Text style={{ color: "rgba(255,255,255,0.8)", fontSize: 13 }}>{monthLabel(month)}</Text>
+        <Text style={{ color: "#fff", fontSize: 24, fontWeight: "800", marginTop: 2 }}>
+          {greeting}, {firstName} 👋
+        </Text>
+        <Text style={{ color: "rgba(255,255,255,0.85)", marginTop: 6, fontSize: 13, lineHeight: 19 }}>
+          {income || expense ? `Earned ${inr(income)} · Spent ${inr(expense)}` : "Add your first income or expense to get started."}
+        </Text>
+        <View style={{ flexDirection: "row", gap: 10, marginTop: 16 }}>
+          <Pressable onPress={() => navigation.navigate("AddTransaction", { type: "expense" })} style={{ flex: 1, backgroundColor: "#fff", paddingVertical: 11, borderRadius: 14, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 6 }}>
+            <Ionicons name="remove-circle" size={18} color={colors.primary} />
+            <Text style={{ color: colors.primary, fontWeight: "700" }}>Expense</Text>
+          </Pressable>
+          <Pressable onPress={() => navigation.navigate("AddTransaction", { type: "income" })} style={{ flex: 1, backgroundColor: "rgba(255,255,255,0.2)", paddingVertical: 11, borderRadius: 14, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 6 }}>
+            <Ionicons name="add-circle" size={18} color="#fff" />
+            <Text style={{ color: "#fff", fontWeight: "700" }}>Income</Text>
+          </Pressable>
+        </View>
+      </View>
+
+      <MonthSwitcher month={month} onChange={(m) => { setLoading(true); setMonth(m); }} />
+
+      {loading && !summary ? (
+        <Loading text="Loading your dashboard..." />
+      ) : failed && !summary ? (
+        <EmptyState emoji="📡" title="Can't load data" message="Check your internet and that the API URL is correct, then pull down to retry." />
+      ) : (
+        <>
+          <View style={{ flexDirection: "row", gap: 10, marginBottom: 14 }}>
+            <StatTile icon="arrow-down-circle" label="Income" value={inr(income)} tint="#f97316" />
+            <StatTile icon="arrow-up-circle" label="Expense" value={inr(expense)} tint="#ef4444" />
+            <StatTile icon="wallet" label="Savings" value={inr(savings)} tint="#8b5cf6" />
+          </View>
+
+          {insights.length > 0 && (
+            <>
+              <SectionTitle title="Smart insights" />
+              <Card style={{ gap: 14 }}>
+                {insights.map((i, idx) => (
+                  <View key={idx} style={{ flexDirection: "row", gap: 12, alignItems: "flex-start" }}>
+                    <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: i.tone + "22", alignItems: "center", justifyContent: "center" }}>
+                      <Ionicons name={i.icon} size={19} color={i.tone} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: colors.text, fontWeight: "700", fontSize: 14 }}>{i.title}</Text>
+                      <Text style={{ color: colors.sub, fontSize: 12.5, marginTop: 2, lineHeight: 18 }}>{i.text}</Text>
+                    </View>
+                  </View>
+                ))}
+              </Card>
+            </>
+          )}
+
+          {(summary?.expenseByCategory || []).length > 0 && (
+            <>
+              <SectionTitle title="Spending by category" />
+              <Card style={{ gap: 14 }}>
+                {summary.expenseByCategory.slice(0, 5).map((c) => (
+                  <View key={c._id}>
+                    <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
+                      <Text style={{ color: colors.text, fontWeight: "600" }}>{capitalize(c._id)}</Text>
+                      <Text style={{ color: colors.sub, fontWeight: "600" }}>{inr(c.totalAmount)}</Text>
+                    </View>
+                    <ProgressBar percent={(c.totalAmount / maxCat) * 100} color={colors.primary} />
+                  </View>
+                ))}
+              </Card>
+            </>
+          )}
+
+          {overviewData.length > 0 && (
+            <>
+              <SectionTitle title="Financial overview" />
+              <Card>
+                <DonutChart
+                  data={overviewData}
+                  centerLabel="Total balance"
+                  centerValue={inr((overview?.totalIncome || 0) - (overview?.totalExpense || 0))}
+                />
+                <Legend data={overviewData} />
+              </Card>
+            </>
+          )}
+
+          {last30.some((d) => d.value > 0) && (
+            <>
+              <SectionTitle title="Last 30 days expenses" />
+              <Card>
+                <BarChart width={width - 64} labels={last30.map((d) => d.label)} values={last30.map((d) => d.value)} color="#875CF5" height={190} />
+              </Card>
+            </>
+          )}
+
+          <SectionTitle title="Budgets" action="Manage" onAction={() => navigation.navigate("Budgets")} />
+          {budgets.length === 0 ? (
+            <Card><Text style={{ color: colors.sub }}>No active budgets. Create one in the Budgets tab to track spending limits.</Text></Card>
+          ) : (
+            <Card style={{ gap: 14 }}>
+              {budgets.slice(0, 3).map((b) => (
+                <View key={b._id}>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
+                    <Text style={{ color: colors.text, fontWeight: "600" }}>{capitalize(b.category)}</Text>
+                    <Text style={{ color: progressTone(b.pct, colors), fontWeight: "700", fontSize: 12 }}>
+                      {inr(b.actualSpent)} / {inr(b.budgetAmount)}
+                    </Text>
+                  </View>
+                  <ProgressBar percent={b.pct} color={progressTone(b.pct, colors)} />
+                </View>
+              ))}
+            </Card>
+          )}
+
+          <SectionTitle title="Savings goals" action="View all" onAction={() => navigation.navigate("Goals")} />
+          {goals.filter((g) => g.savedAmount < g.targetAmount).length === 0 ? (
+            <Card><Text style={{ color: colors.sub }}>{goals.length ? "All goals reached 🎉" : "No goals yet. Set one in the Goals tab."}</Text></Card>
+          ) : (
+            <Card style={{ gap: 14 }}>
+              {goals.filter((g) => g.savedAmount < g.targetAmount).slice(0, 3).map((g) => {
+                const pct = (g.savedAmount / g.targetAmount) * 100;
+                return (
+                  <View key={g._id}>
+                    <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
+                      <Text style={{ color: colors.text, fontWeight: "600" }}>{g.icon || "🎯"} {g.title}</Text>
+                      <Text style={{ color: colors.sub, fontSize: 12 }}>{Math.round(pct)}%</Text>
+                    </View>
+                    <ProgressBar percent={pct} color={colors.primary} />
+                  </View>
+                );
+              })}
+            </Card>
+          )}
+
+          <SectionTitle title="Recent transactions" action="See all" onAction={() => navigation.navigate("Transactions")} />
+          {tx.length === 0 ? (
+            <EmptyState emoji="🧾" title="No transactions this month" message="Tap Expense or Income above to add your first one." />
+          ) : (
+            <Card style={{ paddingVertical: 6 }}>
+              {tx.slice(0, 5).map((t) => (
+                <TransactionRow key={t._id} item={t} onPress={() => navigation.navigate("AddTransaction", { item: t })} />
+              ))}
+            </Card>
+          )}
+        </>
+      )}
+    </Screen>
+  );
+}
