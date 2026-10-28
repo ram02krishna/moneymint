@@ -157,17 +157,32 @@ export default function AnalyticsScreen() {
                     { name: "Income", color: "#10b981", values: trend.map((t) => t.income) },
                     { name: "Expense", color: "#ef4444", values: trend.map((t) => t.expense) },
                   ]}
+                  formatValue={(v) => inr(v)}
                 />
               </Card>
 
               <Card style={{ marginBottom: 12 }}>
                 <Text style={{ color: colors.text, fontWeight: "700", marginBottom: 12 }}>Monthly savings</Text>
-                <BarChart width={chartW} labels={labels} values={trend.map((t) => t.savings)} color="#875CF5" />
+                <BarChart
+                  width={chartW}
+                  labels={labels}
+                  values={trend.map((t) => t.savings)}
+                  color="#875CF5"
+                  formatValue={(v) => inr(v)}
+                  valueLabel="Savings"
+                />
               </Card>
 
               <Card>
                 <Text style={{ color: colors.text, fontWeight: "700", marginBottom: 12 }}>Transactions per month</Text>
-                <BarChart width={chartW} labels={labels} values={trend.map((t) => t.transactions)} color="#3B82F6" />
+                <BarChart
+                  width={chartW}
+                  labels={labels}
+                  values={trend.map((t) => t.transactions)}
+                  color="#3B82F6"
+                  formatValue={(v) => `${v} transaction${v === 1 ? "" : "s"}`}
+                  valueLabel="Transactions"
+                />
               </Card>
             </>
           )}

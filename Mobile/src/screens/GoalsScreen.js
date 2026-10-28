@@ -11,7 +11,7 @@ import { inr, shortDate, toDateString } from "../utils/format";
 const ICONS = ["🎯", "🏠", "🚗", "✈️", "💻", "📱", "🎓", "💍", "🏖️", "🛡️", "🎁", "💰"];
 const DAY = 86400000;
 
-export default function GoalsScreen({ navigation }) {
+export default function GoalsScreen({ navigation, route }) {
   const { colors } = useTheme();
   const toast = useToast();
   const [goals, setGoals] = useState([]);
@@ -117,7 +117,15 @@ export default function GoalsScreen({ navigation }) {
   return (
     <View style={{ flex: 1 }}>
       <Screen refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} bottomPad={110}>
-        <Header title="Savings goals" subtitle="Save towards the things that matter" onBack={navigation.canGoBack() ? () => navigation.goBack() : undefined} />
+        <Header
+          title="Savings goals"
+          subtitle="Save towards the things that matter"
+          onBack={() => {
+            if (route?.params?.fromHome) navigation.navigate("Home");
+            else if (navigation.canGoBack()) navigation.goBack();
+            else navigation.navigate("MoreMain");
+          }}
+        />
         {loading ? <Loading /> : (
           <>
             <View style={{ flexDirection: "row", gap: 10, marginBottom: 16 }}>

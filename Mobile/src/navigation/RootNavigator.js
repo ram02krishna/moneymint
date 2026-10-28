@@ -20,6 +20,7 @@ import SplitsScreen from "../screens/SplitsScreen";
 
 const Stack = createNativeStackNavigator();
 const Tabs = createBottomTabNavigator();
+const MoreStack = createNativeStackNavigator();
 
 const TAB_ICONS = {
   Home: ["home", "home-outline"],
@@ -27,6 +28,16 @@ const TAB_ICONS = {
   Analytics: ["bar-chart", "bar-chart-outline"],
   Budgets: ["pie-chart", "pie-chart-outline"],
   More: ["grid", "grid-outline"],
+};
+
+const MoreNavigator = () => {
+  return (
+    <MoreStack.Navigator screenOptions={{ headerShown: false, animation: "slide_from_right" }}>
+      <MoreStack.Screen name="MoreMain" component={MoreScreen} />
+      <MoreStack.Screen name="Goals" component={GoalsScreen} />
+      <MoreStack.Screen name="Splits" component={SplitsScreen} />
+    </MoreStack.Navigator>
+  );
 };
 
 const MainTabs = () => {
@@ -55,7 +66,7 @@ const MainTabs = () => {
       <Tabs.Screen name="Transactions" component={TransactionsScreen} />
       <Tabs.Screen name="Analytics" component={AnalyticsScreen} />
       <Tabs.Screen name="Budgets" component={BudgetsScreen} />
-      <Tabs.Screen name="More" component={MoreScreen} />
+      <Tabs.Screen name="More" component={MoreNavigator} />
     </Tabs.Navigator>
   );
 };
@@ -84,8 +95,6 @@ export default function RootNavigator() {
         {user ? (
           <>
             <Stack.Screen name="Main" component={MainTabs} />
-            <Stack.Screen name="Goals" component={GoalsScreen} />
-            <Stack.Screen name="Splits" component={SplitsScreen} />
             <Stack.Screen name="AddTransaction" component={AddTransactionScreen} options={{ presentation: "modal", animation: "slide_from_bottom" }} />
           </>
         ) : (

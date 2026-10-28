@@ -229,7 +229,7 @@ export default function DashboardScreen({ navigation }) {
             <>
               <SectionTitle title="Last 30 days expenses" />
               <Card>
-                <BarChart width={width - 64} labels={last30.map((d) => d.label)} values={last30.map((d) => d.value)} color="#875CF5" height={190} />
+                <BarChart width={width - 64} labels={last30.map((d) => d.label)} values={last30.map((d) => d.value)} color="#875CF5" height={190} formatValue={(v) => inr(v)} valueLabel="Expense" />
               </Card>
             </>
           )}
@@ -253,7 +253,7 @@ export default function DashboardScreen({ navigation }) {
             </Card>
           )}
 
-          <SectionTitle title="Savings goals" action="View all" onAction={() => navigation.navigate("Goals")} />
+          <SectionTitle title="Savings goals" action="View all" onAction={() => navigation.navigate("More", { screen: "Goals", params: { fromHome: true } })} />
           {goals.filter((g) => g.savedAmount < g.targetAmount).length === 0 ? (
             <Card><Text style={{ color: colors.sub }}>{goals.length ? "All goals reached 🎉" : "No goals yet. Set one in the Goals tab."}</Text></Card>
           ) : (

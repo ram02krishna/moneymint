@@ -1,5 +1,6 @@
-import React from "react";
-import { Text, View } from "react-native";
+import React, { useState } from "react";
+import { Pressable, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import Svg, { Circle, G, Line, Path, Rect, Text as SvgText } from "react-native-svg";
 import { useTheme } from "../theme";
 import { inr } from "../utils/format";
@@ -113,41 +114,162 @@ const Axes = ({ width, height, min, max, labels, colors }) => {
   );
 };
 
-// ---------- line chart (multi-series) ----------
-export const LineChart = ({ labels, series, width, height = 210 }) => {
-  const { colors } = useTheme();
-  const all = series.flatMap((s) => s.values);
+// ---------- line chart (multi-series, interactive touch) ----------
+export const LineChart = ({ labels = [], series = [], width, height = 210, formatValue }) => {
+  const { colors, isDark } = useTheme();
+  const [activeIndex, setActiveIndex] = useState(null);
+
+  if (!labels.length || !series.length) {
+    return null;
+  }
+
+  const all = series.flatMap((s) => s.values || []);
   const max = Math.max(1, ...all);
   const min = Math.min(0, ...all);
-  const iw = width - PAD.l - PAD.r;
+  const iw = Math.max(10, width - PAD.l - PAD.r);
   const ih = height - PAD.t - PAD.b;
   const x = (i) => PAD.l + (labels.length === 1 ? iw / 2 : (iw * i) / (labels.length - 1));
   const y = (v) => PAD.t + ih - ((v - min) / (max - min || 1)) * ih;
 
+  const activeLabel = activeIndex !== null ? labels[activeIndex] : null;
+
   return (
-    <Svg width={width} height={height}>
-      <Axes width={width} height={height} min={min} max={max} labels={labels} colors={colors} />
-      {series.map((s) => {
-        const d = s.values.map((v, i) => `${i === 0 ? "M" : "L"}${x(i)},${y(v)}`).join(" ");
-        return (
-          <G key={s.name}>
-            <Path d={d} stroke={s.color} strokeWidth={2.5} fill="none" strokeLinejoin="round" strokeLinecap="round" />
-            {s.values.map((v, i) => (
-              <Circle key={i} cx={x(i)} cy={y(v)} r={3} fill={colors.card} stroke={s.color} strokeWidth={2} />
-            ))}
-          </G>
-        );
-      })}
-    </Svg>
+    <View style={{ width }}>
+      {/* Interactive inspection banner above the chart */}
+      {activeIndex !== null ? (
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.04)",
+            paddingVertical: 7,
+            paddingHorizontal: 12,
+            borderRadius: 10,
+            marginBottom: 8,
+            borderWidth: 1,
+            borderColor: colors.border,
+          }}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+            <Ionicons name="calendar-outline" size={14} color={colors.primary} />
+            <Text style={{ color: colors.text, fontWeight: "800", fontSize: 13 }}>{activeLabel}</Text>
+          </View>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            {series.map((s) => {
+              const val = s.values?.[activeIndex] ?? 0;
+              const formatted = formatValue ? formatValue(val) : inr(val);
+              return (
+                <View key={s.name} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: s.color }} />
+                  <Text style={{ color: colors.sub, fontSize: 11 }}>{s.name}:</Text>
+                  <Text style={{ color: colors.text, fontWeight: "700", fontSize: 12 }}>{formatted}</Text>
+                </View>
+              );
+            })}
+          </View>
+          <Pressable onPress={() => setActiveIndex(null)} hitSlop={10} style={{ padding: 2 }}>
+            <Ionicons name="close-circle" size={17} color={colors.sub} />
+          </Pressable>
+        </View>
+      ) : (
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, marginBottom: 8, paddingVertical: 2 }}>
+          <Ionicons name="finger-print-outline" size={13} color={colors.sub} />
+          <Text style={{ color: colors.sub, fontSize: 11 }}>Tap any month on graph to inspect data</Text>
+        </View>
+      )}
+
+      {/* SVG Line Chart + Touch Overlay */}
+      <View style={{ width, height, position: "relative" }}>
+        <Svg width={width} height={height}>
+          <Axes width={width} height={height} min={min} max={max} labels={labels} colors={colors} />
+
+          {/* Vertical cursor guide line when active */}
+          {activeIndex !== null && (
+            <Line
+              x1={x(activeIndex)}
+              x2={x(activeIndex)}
+              y1={PAD.t}
+              y2={height - PAD.b}
+              stroke={colors.primary}
+              strokeWidth={1.5}
+              strokeDasharray="4 3"
+            />
+          )}
+
+          {series.map((s) => {
+            const d = s.values.map((v, i) => `${i === 0 ? "M" : "L"}${x(i)},${y(v)}`).join(" ");
+            return (
+              <G key={s.name}>
+                <Path d={d} stroke={s.color} strokeWidth={2.5} fill="none" strokeLinejoin="round" strokeLinecap="round" />
+                {s.values.map((v, i) => (
+                  <Circle key={i} cx={x(i)} cy={y(v)} r={3} fill={colors.card} stroke={s.color} strokeWidth={2} />
+                ))}
+              </G>
+            );
+          })}
+
+          {/* Active indicator points */}
+          {activeIndex !== null &&
+            series.map((s) => {
+              const v = s.values?.[activeIndex] ?? 0;
+              const cx = x(activeIndex);
+              const cy = y(v);
+              return (
+                <G key={s.name + "_active"}>
+                  <Circle cx={cx} cy={cy} r={8} fill={s.color} opacity={0.25} />
+                  <Circle cx={cx} cy={cy} r={5} fill={colors.card} stroke={s.color} strokeWidth={2.5} />
+                </G>
+              );
+            })}
+        </Svg>
+
+        {/* Touch Columns Overlay */}
+        <View
+          style={{
+            position: "absolute",
+            left: PAD.l,
+            top: 0,
+            width: iw,
+            height: height - PAD.b,
+            flexDirection: "row",
+          }}
+          pointerEvents="box-none"
+        >
+          {labels.map((_, i) => (
+            <Pressable
+              key={i}
+              style={{ flex: 1, height: "100%" }}
+              onPress={() => setActiveIndex((prev) => (prev === i ? null : i))}
+            />
+          ))}
+        </View>
+      </View>
+    </View>
   );
 };
 
-// ---------- bar chart (supports negatives) ----------
-export const BarChart = ({ labels, values, width, height = 200, color = "#875CF5", negativeColor = "#FA2C37" }) => {
-  const { colors } = useTheme();
+// ---------- bar chart (supports negatives, interactive touch) ----------
+export const BarChart = ({
+  labels = [],
+  values = [],
+  width,
+  height = 200,
+  color = "#875CF5",
+  negativeColor = "#FA2C37",
+  formatValue,
+  valueLabel = "",
+}) => {
+  const { colors, isDark } = useTheme();
+  const [activeIndex, setActiveIndex] = useState(null);
+
+  if (!labels.length || !values.length) {
+    return null;
+  }
+
   const max = Math.max(1, ...values, 0);
   const min = Math.min(0, ...values);
-  const iw = width - PAD.l - PAD.r;
+  const iw = Math.max(10, width - PAD.l - PAD.r);
   const ih = height - PAD.t - PAD.b;
   const slot = iw / values.length;
   const bw = Math.min(26, slot * 0.62);
@@ -155,35 +277,148 @@ export const BarChart = ({ labels, values, width, height = 200, color = "#875CF5
   const zero = y(0);
   const every = Math.ceil(values.length / 7);
 
+  const activeLabel = activeIndex !== null ? labels[activeIndex] : null;
+  const activeVal = activeIndex !== null ? values[activeIndex] : null;
+  const formattedVal =
+    activeVal !== null
+      ? formatValue
+        ? formatValue(activeVal)
+        : inr(activeVal)
+      : null;
+
   return (
-    <Svg width={width} height={height}>
-      {[0, 1, 2, 3].map((t) => {
-        const yy = PAD.t + (ih * t) / 3;
-        const val = max - ((max - min) * t) / 3;
-        return (
-          <G key={t}>
-            <Line x1={PAD.l} x2={width - PAD.r} y1={yy} y2={yy} stroke={colors.border} strokeWidth={1} strokeDasharray="3 4" />
-            <SvgText x={PAD.l - 6} y={yy + 4} fontSize={10} fill={colors.sub} textAnchor="end">
-              {compact(val)}
-            </SvgText>
-          </G>
-        );
-      })}
-      {values.map((v, i) => {
-        const cx = PAD.l + slot * i + slot / 2;
-        const top = Math.min(y(v), zero);
-        const h = Math.max(2, Math.abs(y(v) - zero));
-        return (
-          <G key={i}>
-            <Rect x={cx - bw / 2} y={top} width={bw} height={h} rx={5} fill={v < 0 ? negativeColor : color} />
-            {i % every === 0 && (
-              <SvgText x={cx} y={height - 6} fontSize={10} fill={colors.sub} textAnchor="middle">
-                {labels[i]}
-              </SvgText>
-            )}
-          </G>
-        );
-      })}
-    </Svg>
+    <View style={{ width }}>
+      {/* Interactive inspection banner above the chart */}
+      {activeIndex !== null ? (
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.04)",
+            paddingVertical: 7,
+            paddingHorizontal: 12,
+            borderRadius: 10,
+            marginBottom: 8,
+            borderWidth: 1,
+            borderColor: colors.border,
+          }}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+            <Ionicons name="calendar-outline" size={14} color={color} />
+            <Text style={{ color: colors.text, fontWeight: "800", fontSize: 13 }}>{activeLabel}</Text>
+          </View>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+            {valueLabel ? <Text style={{ color: colors.sub, fontSize: 12 }}>{valueLabel}:</Text> : null}
+            <Text
+              style={{
+                color: activeVal < 0 ? negativeColor : color,
+                fontWeight: "800",
+                fontSize: 14,
+              }}
+            >
+              {formattedVal}
+            </Text>
+          </View>
+          <Pressable onPress={() => setActiveIndex(null)} hitSlop={10} style={{ padding: 2 }}>
+            <Ionicons name="close-circle" size={17} color={colors.sub} />
+          </Pressable>
+        </View>
+      ) : (
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, marginBottom: 8, paddingVertical: 2 }}>
+          <Ionicons name="finger-print-outline" size={13} color={colors.sub} />
+          <Text style={{ color: colors.sub, fontSize: 11 }}>
+            Tap any bar to view exact {valueLabel ? valueLabel.toLowerCase() : "amount"}
+          </Text>
+        </View>
+      )}
+
+      {/* SVG Bar Chart + Touch Overlay */}
+      <View style={{ width, height, position: "relative" }}>
+        <Svg width={width} height={height}>
+          {[0, 1, 2, 3].map((t) => {
+            const yy = PAD.t + (ih * t) / 3;
+            const val = max - ((max - min) * t) / 3;
+            return (
+              <G key={t}>
+                <Line x1={PAD.l} x2={width - PAD.r} y1={yy} y2={yy} stroke={colors.border} strokeWidth={1} strokeDasharray="3 4" />
+                <SvgText x={PAD.l - 6} y={yy + 4} fontSize={10} fill={colors.sub} textAnchor="end">
+                  {compact(val)}
+                </SvgText>
+              </G>
+            );
+          })}
+
+          {/* Active column highlight pillar */}
+          {activeIndex !== null && (
+            <Rect
+              x={PAD.l + slot * activeIndex}
+              y={PAD.t}
+              width={slot}
+              height={ih}
+              rx={6}
+              fill={isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)"}
+            />
+          )}
+
+          {values.map((v, i) => {
+            const cx = PAD.l + slot * i + slot / 2;
+            const top = Math.min(y(v), zero);
+            const h = Math.max(2, Math.abs(y(v) - zero));
+            const isSelected = activeIndex === i;
+            const barOpacity = activeIndex !== null ? (isSelected ? 1 : 0.35) : 1;
+
+            return (
+              <G key={i}>
+                <Rect
+                  x={cx - bw / 2}
+                  y={top}
+                  width={bw}
+                  height={h}
+                  rx={5}
+                  fill={v < 0 ? negativeColor : color}
+                  opacity={barOpacity}
+                  stroke={isSelected ? (isDark ? "#ffffff" : "#0f172a") : "none"}
+                  strokeWidth={isSelected ? 1.5 : 0}
+                />
+                {i % every === 0 && (
+                  <SvgText
+                    x={cx}
+                    y={height - 6}
+                    fontSize={10}
+                    fontWeight={isSelected ? "bold" : "normal"}
+                    fill={isSelected ? colors.text : colors.sub}
+                    textAnchor="middle"
+                  >
+                    {labels[i]}
+                  </SvgText>
+                )}
+              </G>
+            );
+          })}
+        </Svg>
+
+        {/* Touch Columns Overlay */}
+        <View
+          style={{
+            position: "absolute",
+            left: PAD.l,
+            top: 0,
+            width: iw,
+            height: height - PAD.b,
+            flexDirection: "row",
+          }}
+          pointerEvents="box-none"
+        >
+          {values.map((_, i) => (
+            <Pressable
+              key={i}
+              style={{ flex: 1, height: "100%" }}
+              onPress={() => setActiveIndex((prev) => (prev === i ? null : i))}
+            />
+          ))}
+        </View>
+      </View>
+    </View>
   );
 };

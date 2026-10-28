@@ -166,8 +166,16 @@ export default function SplitsScreen({ navigation }) {
   const setPersonValue = (id, key, value) => setParticipantValues((old) => ({ ...old, [id]: { ...(old[id] || {}), [key]: value } }));
 
   return (
-    <Screen>
-      <Header title="Split expenses" subtitle="Shared bills, group balances and settlements" onBack={() => navigation.goBack()} right={<Pressable onPress={() => setCreateOpen(true)} style={{ padding: 10, borderRadius: 12, backgroundColor: colors.primarySoft }}><Ionicons name="add" size={23} color={colors.primary} /></Pressable>} />
+    <Screen bottomPad={110}>
+      <Header
+        title="Split expenses"
+        subtitle="Shared bills, group balances and settlements"
+        onBack={() => {
+          if (navigation.canGoBack()) navigation.goBack();
+          else navigation.navigate("MoreMain");
+        }}
+        right={<Pressable onPress={() => setCreateOpen(true)} style={{ padding: 10, borderRadius: 12, backgroundColor: colors.primarySoft }}><Ionicons name="add" size={23} color={colors.primary} /></Pressable>}
+      />
       {error ? <Pressable onPress={() => setError("")} style={{ backgroundColor: colors.dangerSoft, padding: 12, borderRadius: 12, marginBottom: 12 }}><Text style={{ color: colors.danger, fontSize: 13 }}>{error}  ·  Tap to dismiss</Text></Pressable> : null}
 
       <SectionTitle title="Your groups" action="+ New group" onAction={() => setCreateOpen(true)} />
