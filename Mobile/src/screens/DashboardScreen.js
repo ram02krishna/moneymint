@@ -299,14 +299,9 @@ export default function DashboardScreen({ navigation }) {
           {/* Annual Financial overview: Jan to Dec */}
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 24, marginBottom: 12 }}>
             <View style={{ flex: 1, paddingRight: 8 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
-                <Text style={{ fontSize: 18, fontWeight: "800", color: colors.text }}>Financial overview</Text>
-                <View style={{ backgroundColor: "#8b5cf618", paddingHorizontal: 7, paddingVertical: 2, borderRadius: 10, borderWidth: 1, borderColor: "#8b5cf633" }}>
-                  <Text style={{ fontSize: 11, fontWeight: "700", color: "#8b5cf6" }}>Jan – Dec {selectedYear}</Text>
-                </View>
-              </View>
+              <Text style={{ fontSize: 18, fontWeight: "800", color: colors.text }}>Financial overview</Text>
               <Text style={{ fontSize: 12, color: colors.sub, marginTop: 2 }}>
-                Month-by-month trajectory of income, expenses, and savings
+                Jan – Dec {selectedYear} trajectory
               </Text>
             </View>
 
@@ -327,40 +322,57 @@ export default function DashboardScreen({ navigation }) {
 
           <Card style={{ padding: 14 }}>
             {/* 3 Annual KPI cards */}
-            <View style={{ flexDirection: "row", gap: 8, marginBottom: 14 }}>
-              <View style={{ flex: 1, backgroundColor: "#10b98118", padding: 10, borderRadius: 12, borderWidth: 1, borderColor: "#10b98133" }}>
-                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                  <Text style={{ color: "#10b981", fontSize: 10, fontWeight: "700", textTransform: "uppercase" }}>Year Earned</Text>
-                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#10b981" }} />
+            <View style={{ flexDirection: "row", gap: 6, marginBottom: 14 }}>
+              <View style={{ flex: 1, backgroundColor: "#10b98114", paddingVertical: 8, paddingHorizontal: 8, borderRadius: 12, borderWidth: 1, borderColor: "#10b98133" }}>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 3 }}>
+                  <Text style={{ color: "#10b981", fontSize: 10, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.3 }} numberOfLines={1}>
+                    Earned
+                  </Text>
+                  <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: "#10b981" }} />
                 </View>
-                <Text style={{ color: "#10b981", fontSize: 14, fontWeight: "800", marginTop: 3 }} numberOfLines={1}>
+                <Text
+                  style={{ color: "#10b981", fontSize: 13, fontWeight: "800" }}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.7}
+                >
                   {inr(annualOverview?.annualIncome || 0)}
                 </Text>
               </View>
 
-              <View style={{ flex: 1, backgroundColor: "#ef444418", padding: 10, borderRadius: 12, borderWidth: 1, borderColor: "#ef444433" }}>
-                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                  <Text style={{ color: "#ef4444", fontSize: 10, fontWeight: "700", textTransform: "uppercase" }}>Year Spent</Text>
-                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#ef4444" }} />
+              <View style={{ flex: 1, backgroundColor: "#ef444414", paddingVertical: 8, paddingHorizontal: 8, borderRadius: 12, borderWidth: 1, borderColor: "#ef444433" }}>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 3 }}>
+                  <Text style={{ color: "#ef4444", fontSize: 10, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.3 }} numberOfLines={1}>
+                    Spent
+                  </Text>
+                  <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: "#ef4444" }} />
                 </View>
-                <Text style={{ color: "#ef4444", fontSize: 14, fontWeight: "800", marginTop: 3 }} numberOfLines={1}>
+                <Text
+                  style={{ color: "#ef4444", fontSize: 13, fontWeight: "800" }}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.7}
+                >
                   {inr(annualOverview?.annualExpense || 0)}
                 </Text>
               </View>
 
-              <View style={{ flex: 1, backgroundColor: "#8b5cf618", padding: 10, borderRadius: 12, borderWidth: 1, borderColor: "#8b5cf633" }}>
-                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                  <Text style={{ color: "#8b5cf6", fontSize: 10, fontWeight: "700", textTransform: "uppercase" }}>Net Savings</Text>
-                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#8b5cf6" }} />
+              <View style={{ flex: 1, backgroundColor: "#8b5cf614", paddingVertical: 8, paddingHorizontal: 8, borderRadius: 12, borderWidth: 1, borderColor: "#8b5cf633" }}>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 3 }}>
+                  <Text style={{ color: "#8b5cf6", fontSize: 10, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.3 }} numberOfLines={1}>
+                    Saved
+                  </Text>
+                  <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: "#8b5cf6" }} />
                 </View>
                 <Text
                   style={{
                     color: (annualOverview?.annualSavings ?? 0) >= 0 ? "#8b5cf6" : "#ef4444",
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: "800",
-                    marginTop: 3,
                   }}
                   numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.7}
                 >
                   {inr(annualOverview?.annualSavings || 0)}
                 </Text>

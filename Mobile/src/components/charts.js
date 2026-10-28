@@ -81,7 +81,7 @@ export const Legend = ({ data, colors: palette = CHART_COLORS }) => {
 };
 
 // ---------- shared axes ----------
-const PAD = { l: 40, r: 8, t: 10, b: 24 };
+const PAD = { l: 36, r: 16, t: 14, b: 24 };
 
 const Axes = ({ width, height, min, max, labels, colors }) => {
   const ih = height - PAD.t - PAD.b;
@@ -102,7 +102,8 @@ const Axes = ({ width, height, min, max, labels, colors }) => {
         );
       })}
       {labels.map((l, i) => {
-        if (labels.length > 7 && i % 2 === 1 && i !== labels.length - 1) return null;
+        if (labels.length === 12 && i % 2 === 1) return null;
+        if (labels.length > 7 && labels.length !== 12 && i % 2 === 1 && i !== labels.length - 1) return null;
         const x = PAD.l + (labels.length === 1 ? iw / 2 : (iw * i) / (labels.length - 1));
         return (
           <SvgText key={i} x={x} y={height - 6} fontSize={10} fill={colors.sub} textAnchor="middle">
@@ -179,38 +180,69 @@ export const LineChart = ({ labels = [], series = [], width, height = 210, forma
       {activeIndex !== null ? (
         <View
           style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-            backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.04)",
+            backgroundColor: isDark ? "rgba(30, 27, 75, 0.45)" : "rgba(139, 92, 246, 0.08)",
             paddingVertical: 8,
-            paddingHorizontal: 12,
+            paddingHorizontal: 10,
             borderRadius: 12,
-            marginBottom: 8,
+            marginBottom: 10,
             borderWidth: 1,
-            borderColor: colors.primary,
+            borderColor: colors.primary + "44",
           }}
         >
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-            <Ionicons name="calendar" size={14} color={colors.primary} />
-            <Text style={{ color: colors.text, fontWeight: "800", fontSize: 13 }}>{activeLabel}</Text>
+          {/* Top row: Active month and dismiss button */}
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+              <Ionicons name="calendar" size={13} color={colors.primary} />
+              <Text style={{ color: colors.text, fontWeight: "800", fontSize: 13 }}>
+                {activeLabel}
+              </Text>
+            </View>
+            <Pressable onPress={() => setActiveIndex(null)} hitSlop={12} style={{ padding: 2 }}>
+              <Ionicons name="close-circle" size={17} color={colors.sub} />
+            </Pressable>
           </View>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, flexWrap: "wrap", justifyContent: "flex-end" }}>
+
+          {/* Series breakdown in equal responsive sub-cards */}
+          <View style={{ flexDirection: "row", gap: 6 }}>
             {series.map((s) => {
               const val = s.values?.[activeIndex] ?? 0;
               const formatted = formatValue ? formatValue(val) : inr(val);
               return (
-                <View key={s.name} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: s.color }} />
-                  <Text style={{ color: colors.sub, fontSize: 11 }}>{s.name}:</Text>
-                  <Text style={{ color: s.color, fontWeight: "800", fontSize: 13 }}>{formatted}</Text>
+                <View
+                  key={s.name}
+                  style={{
+                    flex: 1,
+                    backgroundColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.85)",
+                    borderRadius: 8,
+                    paddingVertical: 5,
+                    paddingHorizontal: 4,
+                    alignItems: "center",
+                    borderWidth: 1,
+                    borderColor: s.color + "33",
+                  }}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 3.5, marginBottom: 2 }}>
+                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: s.color }} />
+                    <Text style={{ color: colors.sub, fontSize: 10, fontWeight: "700" }} numberOfLines={1}>
+                      {s.name}
+                    </Text>
+                  </View>
+                  <Text
+                    style={{
+                      color: val < 0 ? "#ef4444" : s.color,
+                      fontWeight: "800",
+                      fontSize: 12,
+                    }}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.7}
+                  >
+                    {formatted}
+                  </Text>
                 </View>
               );
             })}
           </View>
-          <Pressable onPress={() => setActiveIndex(null)} hitSlop={12} style={{ padding: 2 }}>
-            <Ionicons name="close-circle" size={18} color={colors.sub} />
-          </Pressable>
         </View>
       ) : (
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 8, paddingVertical: 4 }}>
@@ -254,45 +286,62 @@ export const LineChart = ({ labels = [], series = [], width, height = 210, forma
             );
           })}
 
-          {/* Active indicator points and floating callout badges */}
+          {/* Active indicator points (outer halo + ring) */}
           {activeIndex !== null &&
             series.map((s) => {
               const v = s.values?.[activeIndex] ?? 0;
               const cx = x(activeIndex);
               const cy = y(v);
-              const formatted = formatValue ? formatValue(v) : inr(v);
-              const badgeW = Math.max(52, formatted.length * 7 + 10);
-              const badgeX = Math.min(width - PAD.r - badgeW, Math.max(PAD.l, cx - badgeW / 2));
-              const badgeY = cy > PAD.t + 28 ? cy - 26 : cy + 10;
 
               return (
                 <G key={s.name + "_active"}>
-                  <Circle cx={cx} cy={cy} r={9} fill={s.color} opacity={0.25} />
-                  <Circle cx={cx} cy={cy} r={5} fill={colors.card} stroke={s.color} strokeWidth={2.5} />
-                  <Rect
-                    x={badgeX}
-                    y={badgeY}
-                    width={badgeW}
-                    height={18}
-                    rx={5}
-                    fill={isDark ? "rgba(15,23,42,0.95)" : "rgba(255,255,255,0.96)"}
-                    stroke={s.color}
-                    strokeWidth={1.2}
-                  />
-                  <SvgText
-                    x={badgeX + badgeW / 2}
-                    y={badgeY + 12.5}
-                    fontSize={10}
-                    fontWeight="bold"
-                    fill={s.color}
-                    textAnchor="middle"
-                  >
-                    {formatted}
-                  </SvgText>
+                  <Circle cx={cx} cy={cy} r={8} fill={s.color} opacity={0.3} />
+                  <Circle cx={cx} cy={cy} r={4.5} fill={colors.card} stroke={s.color} strokeWidth={2.5} />
                 </G>
               );
             })}
+
+          {/* If single series, also render single floating callout badge */}
+          {activeIndex !== null && series.length === 1 && (() => {
+            const s = series[0];
+            const v = s.values?.[activeIndex] ?? 0;
+            const cx = x(activeIndex);
+            const cy = y(v);
+            const formatted = formatValue ? formatValue(v) : inr(v);
+            const badgeW = Math.max(52, formatted.length * 7 + 10);
+            const badgeX = Math.min(width - PAD.r - badgeW, Math.max(PAD.l, cx - badgeW / 2));
+            const badgeY = cy > PAD.t + 28 ? cy - 24 : cy + 10;
+
+            return (
+              <G key="single_badge">
+                <Rect
+                  x={badgeX}
+                  y={badgeY}
+                  width={badgeW}
+                  height={18}
+                  rx={5}
+                  fill={isDark ? "rgba(15,23,42,0.95)" : "rgba(255,255,255,0.96)"}
+                  stroke={s.color}
+                  strokeWidth={1.2}
+                />
+                <SvgText
+                  x={badgeX + badgeW / 2}
+                  y={badgeY + 12.5}
+                  fontSize={10}
+                  fontWeight="bold"
+                  fill={s.color}
+                  textAnchor="middle"
+                >
+                  {formatted}
+                </SvgText>
+              </G>
+            );
+          })()}
         </Svg>
+      </View>
+    </View>
+  );
+};
       </View>
     </View>
   );
