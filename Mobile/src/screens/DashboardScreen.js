@@ -6,7 +6,7 @@ import { useTheme } from "../theme";
 import { useAuth } from "../context/AuthContext";
 import { Badge, Card, EmptyState, Loading, MonthSwitcher, ProgressBar, Screen, SectionTitle, StatTile } from "../components/ui";
 import TransactionRow from "../components/TransactionRow";
-import { DonutChart, Legend, LineChart } from "../components/charts";
+import { BarChart, DonutChart, Legend, LineChart } from "../components/charts";
 import client from "../api/client";
 import { API_PATHS } from "../api/paths";
 import { capitalize, inr, monthKey, monthLabel, progressTone } from "../utils/format";
@@ -18,15 +18,18 @@ export default function DashboardScreen({ navigation }) {
   const chartW = width - 64;
   const [month, setMonth] = useState(new Date());
   const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
+  const [annualView, setAnnualView] = useState("all");
   const [summary, setSummary] = useState(null);
   const [annualOverview, setAnnualOverview] = useState(null);
   const [budgets, setBudgets] = useState([]);
   const [goals, setGoals] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingAnnual, setLoadingAnnual] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [failed, setFailed] = useState(false);
 
   const loadAnnual = useCallback(async (yr) => {
+    setLoadingAnnual(true);
     try {
       const res = await client.get(`${API_PATHS.DASHBOARD.GET_TREND_SUMMARY}?year=${yr}&calendarYear=true`);
       if (res.data?.data) {
@@ -34,6 +37,8 @@ export default function DashboardScreen({ navigation }) {
       }
     } catch (err) {
       console.error("Error loading annual financial overview:", err);
+    } finally {
+      setLoadingAnnual(false);
     }
   }, []);
 
@@ -72,7 +77,7 @@ export default function DashboardScreen({ navigation }) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [month]);
+  }, [month, selectedYear, loadAnnual]);
 
   useFocusEffect(
     useCallback(() => {
@@ -209,7 +214,17 @@ export default function DashboardScreen({ navigation }) {
         </View>
       </View>
 
-      <MonthSwitcher month={month} onChange={(m) => { setLoading(true); setMonth(m); }} />
+      <MonthSwitcher
+        month={month}
+        onChange={(m) => {
+          setLoading(true);
+          setMonth(m);
+          const yr = m.getFullYear();
+          if (yr !== selectedYear) {
+            setSelectedYear(yr);
+          }
+        }}
+      />
 
       {loading && !summary ? (
         <Loading text="Loading your dashboard..." />
@@ -282,16 +297,28 @@ export default function DashboardScreen({ navigation }) {
           )}
 
           {/* Annual Financial overview: Jan to Dec */}
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 22, marginBottom: 10 }}>
-            <View>
-              <Text style={{ fontSize: 18, fontWeight: "800", color: colors.text }}>Financial overview</Text>
-              <Text style={{ fontSize: 12, color: colors.sub, marginTop: 2 }}>Jan – Dec {selectedYear} trajectory</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 24, marginBottom: 12 }}>
+            <View style={{ flex: 1, paddingRight: 8 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
+                <Text style={{ fontSize: 18, fontWeight: "800", color: colors.text }}>Financial overview</Text>
+                <View style={{ backgroundColor: "#8b5cf618", paddingHorizontal: 7, paddingVertical: 2, borderRadius: 10, borderWidth: 1, borderColor: "#8b5cf633" }}>
+                  <Text style={{ fontSize: 11, fontWeight: "700", color: "#8b5cf6" }}>Jan – Dec {selectedYear}</Text>
+                </View>
+              </View>
+              <Text style={{ fontSize: 12, color: colors.sub, marginTop: 2 }}>
+                Month-by-month trajectory of income, expenses, and savings
+              </Text>
             </View>
+
+            {/* Year Navigator */}
             <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 4, paddingVertical: 2 }}>
               <Pressable onPress={() => setSelectedYear((y) => y - 1)} hitSlop={10} style={{ padding: 4 }}>
                 <Ionicons name="chevron-back" size={16} color={colors.text} />
               </Pressable>
-              <Text style={{ fontSize: 13, fontWeight: "700", color: colors.text, marginHorizontal: 6 }}>{selectedYear}</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 3, marginHorizontal: 6 }}>
+                <Ionicons name="calendar-outline" size={13} color="#8b5cf6" />
+                <Text style={{ fontSize: 13, fontWeight: "700", color: colors.text }}>{selectedYear}</Text>
+              </View>
               <Pressable onPress={() => setSelectedYear((y) => y + 1)} hitSlop={10} style={{ padding: 4 }}>
                 <Ionicons name="chevron-forward" size={16} color={colors.text} />
               </Pressable>
@@ -299,43 +326,153 @@ export default function DashboardScreen({ navigation }) {
           </View>
 
           <Card style={{ padding: 14 }}>
-            {/* 3 Annual KPI badges */}
+            {/* 3 Annual KPI cards */}
             <View style={{ flexDirection: "row", gap: 8, marginBottom: 14 }}>
               <View style={{ flex: 1, backgroundColor: "#10b98118", padding: 10, borderRadius: 12, borderWidth: 1, borderColor: "#10b98133" }}>
-                <Text style={{ color: "#10b981", fontSize: 10, fontWeight: "700", textTransform: "uppercase" }}>Earned</Text>
-                <Text style={{ color: "#10b981", fontSize: 13.5, fontWeight: "800", marginTop: 2 }} numberOfLines={1}>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                  <Text style={{ color: "#10b981", fontSize: 10, fontWeight: "700", textTransform: "uppercase" }}>Year Earned</Text>
+                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#10b981" }} />
+                </View>
+                <Text style={{ color: "#10b981", fontSize: 14, fontWeight: "800", marginTop: 3 }} numberOfLines={1}>
                   {inr(annualOverview?.annualIncome || 0)}
                 </Text>
               </View>
+
               <View style={{ flex: 1, backgroundColor: "#ef444418", padding: 10, borderRadius: 12, borderWidth: 1, borderColor: "#ef444433" }}>
-                <Text style={{ color: "#ef4444", fontSize: 10, fontWeight: "700", textTransform: "uppercase" }}>Spent</Text>
-                <Text style={{ color: "#ef4444", fontSize: 13.5, fontWeight: "800", marginTop: 2 }} numberOfLines={1}>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                  <Text style={{ color: "#ef4444", fontSize: 10, fontWeight: "700", textTransform: "uppercase" }}>Year Spent</Text>
+                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#ef4444" }} />
+                </View>
+                <Text style={{ color: "#ef4444", fontSize: 14, fontWeight: "800", marginTop: 3 }} numberOfLines={1}>
                   {inr(annualOverview?.annualExpense || 0)}
                 </Text>
               </View>
+
               <View style={{ flex: 1, backgroundColor: "#8b5cf618", padding: 10, borderRadius: 12, borderWidth: 1, borderColor: "#8b5cf633" }}>
-                <Text style={{ color: "#8b5cf6", fontSize: 10, fontWeight: "700", textTransform: "uppercase" }}>Saved</Text>
-                <Text style={{ color: (annualOverview?.annualSavings || 0) >= 0 ? "#8b5cf6" : "#ef4444", fontSize: 13.5, fontWeight: "800", marginTop: 2 }} numberOfLines={1}>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                  <Text style={{ color: "#8b5cf6", fontSize: 10, fontWeight: "700", textTransform: "uppercase" }}>Net Savings</Text>
+                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#8b5cf6" }} />
+                </View>
+                <Text
+                  style={{
+                    color: (annualOverview?.annualSavings ?? 0) >= 0 ? "#8b5cf6" : "#ef4444",
+                    fontSize: 14,
+                    fontWeight: "800",
+                    marginTop: 3,
+                  }}
+                  numberOfLines={1}
+                >
                   {inr(annualOverview?.annualSavings || 0)}
                 </Text>
               </View>
             </View>
 
-            {annualMonths.length > 0 ? (
-              <LineChart
-                width={chartW}
-                height={205}
-                labels={annualMonths.map((m) => m.monthDisplay)}
-                series={[
-                  { name: "Income", color: "#10b981", values: annualMonths.map((m) => m.income) },
-                  { name: "Expense", color: "#ef4444", values: annualMonths.map((m) => m.expense) },
-                  { name: "Net Saved", color: "#8b5cf6", values: annualMonths.map((m) => m.savings) },
-                ]}
-                formatValue={(v) => inr(v)}
-              />
+            {/* View Mode Filter Tabs */}
+            <View style={{ flexDirection: "row", backgroundColor: colors.track, borderRadius: 10, padding: 3, marginBottom: 14 }}>
+              {[
+                { id: "all", label: "Trajectory" },
+                { id: "income", label: "Income" },
+                { id: "expense", label: "Expense" },
+                { id: "savings", label: "Net Saved" },
+              ].map((tab) => {
+                const active = annualView === tab.id;
+                return (
+                  <Pressable
+                    key={tab.id}
+                    onPress={() => setAnnualView(tab.id)}
+                    style={{
+                      flex: 1,
+                      paddingVertical: 6,
+                      borderRadius: 8,
+                      alignItems: "center",
+                      backgroundColor: active ? colors.card : "transparent",
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 11.5,
+                        fontWeight: active ? "700" : "500",
+                        color: active ? colors.text : colors.sub,
+                      }}
+                    >
+                      {tab.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {/* Multi-series Legend when All is selected */}
+            {annualView === "all" && (
+              <View style={{ flexDirection: "row", justifyContent: "center", gap: 16, marginBottom: 10 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#10b981" }} />
+                  <Text style={{ color: colors.sub, fontSize: 11.5, fontWeight: "600" }}>Income</Text>
+                </View>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#ef4444" }} />
+                  <Text style={{ color: colors.sub, fontSize: 11.5, fontWeight: "600" }}>Expense</Text>
+                </View>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#8b5cf6" }} />
+                  <Text style={{ color: colors.sub, fontSize: 11.5, fontWeight: "600" }}>Net Saved</Text>
+                </View>
+              </View>
+            )}
+
+            {/* Chart Area */}
+            {loadingAnnual && !annualOverview ? (
+              <Text style={{ color: colors.sub, textAlign: "center", paddingVertical: 30 }}>
+                Loading {selectedYear} trajectory...
+              </Text>
+            ) : annualMonths.length > 0 ? (
+              annualView === "all" ? (
+                <LineChart
+                  width={chartW}
+                  height={205}
+                  labels={annualMonths.map((m) => m.monthDisplay)}
+                  series={[
+                    { name: "Income", color: "#10b981", values: annualMonths.map((m) => m.income) },
+                    { name: "Expense", color: "#ef4444", values: annualMonths.map((m) => m.expense) },
+                    { name: "Net Saved", color: "#8b5cf6", values: annualMonths.map((m) => m.savings) },
+                  ]}
+                  formatValue={(v) => inr(v)}
+                />
+              ) : annualView === "income" ? (
+                <BarChart
+                  width={chartW}
+                  height={205}
+                  labels={annualMonths.map((m) => m.monthDisplay)}
+                  values={annualMonths.map((m) => m.income)}
+                  color="#10b981"
+                  formatValue={(v) => inr(v)}
+                  valueLabel="Income"
+                />
+              ) : annualView === "expense" ? (
+                <BarChart
+                  width={chartW}
+                  height={205}
+                  labels={annualMonths.map((m) => m.monthDisplay)}
+                  values={annualMonths.map((m) => m.expense)}
+                  color="#ef4444"
+                  formatValue={(v) => inr(v)}
+                  valueLabel="Expense"
+                />
+              ) : (
+                <BarChart
+                  width={chartW}
+                  height={205}
+                  labels={annualMonths.map((m) => m.monthDisplay)}
+                  values={annualMonths.map((m) => m.savings)}
+                  color="#8b5cf6"
+                  negativeColor="#ef4444"
+                  formatValue={(v) => inr(v)}
+                  valueLabel="Net Saved"
+                />
+              )
             ) : (
               <Text style={{ color: colors.sub, textAlign: "center", paddingVertical: 20 }}>
-                Loading {selectedYear} trajectory...
+                No records found for {selectedYear}
               </Text>
             )}
           </Card>

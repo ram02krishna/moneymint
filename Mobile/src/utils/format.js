@@ -1,6 +1,7 @@
 export const inr = (n) => {
   const num = Number(n) || 0;
-  return "₹" + num.toLocaleString("en-IN", { maximumFractionDigits: 2 });
+  const sign = num < 0 ? "-" : "";
+  return sign + "₹" + Math.abs(num).toLocaleString("en-IN", { maximumFractionDigits: 2 });
 };
 
 export const pad = (n) => String(n).padStart(2, "0");
