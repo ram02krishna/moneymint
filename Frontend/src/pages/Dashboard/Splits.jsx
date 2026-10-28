@@ -461,53 +461,101 @@ export default function Splits() {
             {/* Main content grid */}
             <div className="grid items-start gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
               {/* Left Column: Group list */}
-              <aside className="card p-5 space-y-4">
-                <div className="flex items-center justify-between pb-1 border-b border-gray-100 dark:border-gray-700">
-                  <h2 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                    <LuUsers className="text-purple-600 dark:text-purple-400" /> Your Groups
-                  </h2>
-                  <span className="badge badge-purple">{groups.length}</span>
+              <aside className="card p-5 space-y-3.5">
+                <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700/80">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 flex items-center justify-center text-sm font-semibold">
+                      <LuUsers />
+                    </div>
+                    <h2 className="text-base font-bold text-gray-900 dark:text-white">
+                      Your Groups
+                    </h2>
+                    <span className="badge badge-purple text-xs font-bold">
+                      {groups.length}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setGroupForm({ name: "", description: "", memberEmails: "" });
+                      setCreateOpen(true);
+                    }}
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 py-1 px-2.5 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-colors cursor-pointer"
+                    title="Create new group"
+                  >
+                    <LuPlus className="text-sm" />
+                    <span>New</span>
+                  </button>
                 </div>
 
-                <div className="space-y-2.5 max-h-[calc(100vh-320px)] overflow-y-auto pr-1">
+                <div className="space-y-2 max-h-[calc(100vh-320px)] overflow-y-auto pr-1 custom-scrollbar">
                   {groups.map((group) => {
                     const isActive = activeGroupId === group._id;
                     const bal = group.myBalance || 0;
+                    const initials = (group.name || "G")
+                      .trim()
+                      .split(/\s+/)
+                      .slice(0, 2)
+                      .map((word) => word[0])
+                      .join("")
+                      .toUpperCase();
+
                     return (
                       <button
                         key={group._id}
                         type="button"
                         onClick={() => selectGroup(group._id)}
-                        className={`w-full text-left p-3.5 rounded-2xl border transition-all duration-200 cursor-pointer ${
+                        className={`group relative w-full text-left p-3 rounded-xl border transition-all duration-200 cursor-pointer flex items-center gap-3 ${
                           isActive
-                            ? "bg-purple-50/80 dark:bg-purple-950/40 border-purple-300 dark:border-purple-600 shadow-sm"
-                            : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 hover:border-purple-200 dark:hover:border-purple-800"
+                            ? "bg-purple-50/70 dark:bg-purple-950/30 border-purple-300 dark:border-purple-600/70 shadow-sm ring-1 ring-purple-500/20"
+                            : "bg-white dark:bg-gray-800/80 border-gray-100 dark:border-gray-700/80 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:border-gray-200 dark:hover:border-gray-600"
                         }`}
                       >
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="font-bold text-sm text-gray-900 dark:text-white truncate">
-                            {group.name}
-                          </p>
-                          <span
-                            className={`badge shrink-0 ${
-                              bal > 0
-                                ? "badge-green"
-                                : bal < 0
-                                ? "badge-red"
-                                : "badge-gray"
-                            }`}
-                          >
-                            {bal > 0
-                              ? `+₹${addThousandsSeparator(bal.toFixed(0))}`
-                              : bal < 0
-                              ? `-₹${addThousandsSeparator(Math.abs(bal).toFixed(0))}`
-                              : "Settled"}
-                          </span>
+                        <div
+                          className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 transition-all duration-200 ${
+                            isActive
+                              ? "bg-gradient-to-br from-purple-600 to-indigo-600 text-white shadow-xs shadow-purple-500/30"
+                              : "bg-purple-50 dark:bg-gray-700/80 text-purple-700 dark:text-purple-300 group-hover:bg-purple-100 dark:group-hover:bg-purple-900/40"
+                          }`}
+                        >
+                          {initials || <LuUsers />}
                         </div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
-                          {group.members?.length || 0} members
-                          {group.description ? ` · ${group.description}` : ""}
-                        </p>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-1.5">
+                            <p className="font-bold text-sm text-gray-900 dark:text-white truncate">
+                              {group.name}
+                            </p>
+                            <span
+                              className={`badge shrink-0 ${
+                                bal > 0
+                                  ? "badge-green"
+                                  : bal < 0
+                                  ? "badge-red"
+                                  : "badge-green"
+                              }`}
+                            >
+                              {bal > 0
+                                ? `+₹${addThousandsSeparator(bal.toFixed(0))}`
+                                : bal < 0
+                                ? `-₹${addThousandsSeparator(Math.abs(bal).toFixed(0))}`
+                                : "Settled"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+                            <span className="flex items-center gap-1 shrink-0">
+                              <LuUsers className="text-[11px]" />
+                              {group.members?.length || 0}
+                            </span>
+                            {group.description && (
+                              <>
+                                <span className="opacity-40">·</span>
+                                <span className="truncate">{group.description}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
                       </button>
                     );
                   })}
@@ -553,17 +601,18 @@ export default function Splits() {
                         <div className="flex flex-wrap items-center gap-2.5">
                           <button
                             type="button"
-                            className="add-btn text-xs py-2 px-3.5"
+                            className="card-btn !rounded-xl !py-2.5 !px-3.5 text-xs font-semibold hover:border-purple-300 dark:hover:border-purple-500/50 hover:text-purple-600 dark:hover:text-purple-300"
                             onClick={() => {
                               setFriendEmail("");
                               setFriendOpen(true);
                             }}
                           >
-                            <LuUserPlus className="text-base" /> Add Member
+                            <LuUserPlus className="text-base text-purple-600 dark:text-purple-400" />
+                            <span>Add Member</span>
                           </button>
                           <button
                             type="button"
-                            className="add-btn add-btn-fill text-xs py-2 px-3.5"
+                            className="add-btn add-btn-fill !rounded-xl !py-2.5 !px-3.5 text-xs font-semibold shadow-md shadow-purple-500/25"
                             onClick={() => {
                               setExpenseForm({
                                 ...emptyExpense(),
@@ -572,7 +621,8 @@ export default function Splits() {
                               setExpenseOpen(true);
                             }}
                           >
-                            <LuReceipt className="text-base" /> Record Bill
+                            <LuReceipt className="text-base" />
+                            <span>Record Bill</span>
                           </button>
                           <button
                             type="button"
@@ -581,7 +631,7 @@ export default function Splits() {
                             aria-label="Delete Group"
                             onClick={() => setDeleteConfirmOpen(true)}
                           >
-                            <LuTrash2 className="text-lg" />
+                            <LuTrash2 className="text-base" />
                           </button>
                         </div>
                       </div>
@@ -856,7 +906,7 @@ export default function Splits() {
               <button
                 type="submit"
                 disabled={saving}
-                className="btn-primary"
+                className="btn-primary !w-auto !my-0"
               >
                 {saving ? "Creating..." : "Create Group"}
               </button>
@@ -896,7 +946,7 @@ export default function Splits() {
               <button
                 type="submit"
                 disabled={saving}
-                className="btn-primary"
+                className="btn-primary !w-auto !my-0"
               >
                 {saving ? "Adding..." : "Add Member"}
               </button>
@@ -1099,7 +1149,7 @@ export default function Splits() {
                 <button
                   type="submit"
                   disabled={saving || !selectedParticipants.length}
-                  className="btn-primary"
+                  className="btn-primary !w-auto !my-0"
                 >
                   {saving ? "Saving..." : "Save Shared Bill"}
                 </button>
@@ -1166,7 +1216,7 @@ export default function Splits() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="btn-primary"
+                  className="btn-primary !w-auto !my-0"
                 >
                   {saving ? "Saving..." : "Confirm Settlement"}
                 </button>
