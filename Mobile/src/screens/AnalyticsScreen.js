@@ -98,7 +98,7 @@ export default function AnalyticsScreen() {
       ) : (
         <>
           <View style={{ flexDirection: "row", gap: 10 }}>
-            <StatTile icon="arrow-down-circle" label="Income" value={inr(data?.totalIncome ?? 0)} tint="#f97316" />
+            <StatTile icon="arrow-down-circle" label="Income" value={inr(data?.totalIncome ?? 0)} tint="#10b981" />
             <StatTile icon="arrow-up-circle" label="Expense" value={inr(data?.totalExpense ?? 0)} tint="#ef4444" />
             <StatTile icon="wallet" label="Savings" value={inr(data?.totalSavings ?? 0)} tint="#8b5cf6" />
           </View>

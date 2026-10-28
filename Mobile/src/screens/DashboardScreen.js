@@ -171,14 +171,18 @@ export default function DashboardScreen({ navigation }) {
         <Text style={{ color: "rgba(255,255,255,0.85)", marginTop: 6, fontSize: 13, lineHeight: 19 }}>
           {income || expense ? `Earned ${inr(income)} · Spent ${inr(expense)}` : "Add your first income or expense to get started."}
         </Text>
-        <View style={{ flexDirection: "row", gap: 10, marginTop: 16 }}>
-          <Pressable onPress={() => navigation.navigate("AddTransaction", { type: "expense" })} style={{ flex: 1, backgroundColor: "#fff", paddingVertical: 11, borderRadius: 14, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 6 }}>
-            <Ionicons name="remove-circle" size={18} color={colors.primary} />
-            <Text style={{ color: colors.primary, fontWeight: "700" }}>Expense</Text>
+        <View style={{ flexDirection: "row", gap: 8, marginTop: 16 }}>
+          <Pressable onPress={() => navigation.navigate("AddTransaction", { type: "expense" })} style={{ flex: 1, backgroundColor: "#fff", paddingVertical: 10, borderRadius: 14, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 5 }}>
+            <Ionicons name="remove-circle" size={17} color={colors.primary} />
+            <Text style={{ color: colors.primary, fontWeight: "700", fontSize: 13 }}>Expense</Text>
           </Pressable>
-          <Pressable onPress={() => navigation.navigate("AddTransaction", { type: "income" })} style={{ flex: 1, backgroundColor: "rgba(255,255,255,0.2)", paddingVertical: 11, borderRadius: 14, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 6 }}>
-            <Ionicons name="add-circle" size={18} color="#fff" />
-            <Text style={{ color: "#fff", fontWeight: "700" }}>Income</Text>
+          <Pressable onPress={() => navigation.navigate("AddTransaction", { type: "income" })} style={{ flex: 1, backgroundColor: "rgba(255,255,255,0.2)", paddingVertical: 10, borderRadius: 14, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 5 }}>
+            <Ionicons name="add-circle" size={17} color="#fff" />
+            <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>Income</Text>
+          </Pressable>
+          <Pressable onPress={() => navigation.navigate("Budgets")} style={{ flex: 1, backgroundColor: "rgba(255,255,255,0.2)", paddingVertical: 10, borderRadius: 14, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 5 }}>
+            <Ionicons name="pie-chart" size={17} color="#fff" />
+            <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>Budgets</Text>
           </Pressable>
         </View>
       </View>
@@ -192,7 +196,7 @@ export default function DashboardScreen({ navigation }) {
       ) : (
         <>
           <View style={{ flexDirection: "row", gap: 10, marginBottom: 14 }}>
-            <StatTile icon="arrow-down-circle" label="Income" value={inr(income)} tint="#f97316" />
+            <StatTile icon="arrow-down-circle" label="Income" value={inr(income)} tint="#10b981" />
             <StatTile icon="arrow-up-circle" label="Expense" value={inr(expense)} tint="#ef4444" />
             <StatTile icon="wallet" label="Savings" value={inr(savings)} tint="#8b5cf6" />
           </View>

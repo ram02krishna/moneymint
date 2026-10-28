@@ -133,6 +133,17 @@ export const LineChart = ({ labels = [], series = [], width, height = 210, forma
 
   const activeLabel = activeIndex !== null ? labels[activeIndex] : null;
 
+  const handleTouchCoord = (coordX) => {
+    const relX = coordX - PAD.l;
+    if (labels.length <= 1) {
+      setActiveIndex(0);
+      return;
+    }
+    const step = iw / (labels.length - 1);
+    const idx = Math.min(labels.length - 1, Math.max(0, Math.round(relX / step)));
+    setActiveIndex(idx);
+  };
+
   return (
     <View style={{ width }}>
       {/* Interactive inspection banner above the chart */}
@@ -143,19 +154,19 @@ export const LineChart = ({ labels = [], series = [], width, height = 210, forma
             alignItems: "center",
             justifyContent: "space-between",
             backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.04)",
-            paddingVertical: 7,
+            paddingVertical: 8,
             paddingHorizontal: 12,
-            borderRadius: 10,
+            borderRadius: 12,
             marginBottom: 8,
             borderWidth: 1,
-            borderColor: colors.border,
+            borderColor: colors.primary,
           }}
         >
           <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-            <Ionicons name="calendar-outline" size={14} color={colors.primary} />
+            <Ionicons name="calendar" size={14} color={colors.primary} />
             <Text style={{ color: colors.text, fontWeight: "800", fontSize: 13 }}>{activeLabel}</Text>
           </View>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, flexWrap: "wrap", justifyContent: "flex-end" }}>
             {series.map((s) => {
               const val = s.values?.[activeIndex] ?? 0;
               const formatted = formatValue ? formatValue(val) : inr(val);
@@ -163,24 +174,32 @@ export const LineChart = ({ labels = [], series = [], width, height = 210, forma
                 <View key={s.name} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                   <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: s.color }} />
                   <Text style={{ color: colors.sub, fontSize: 11 }}>{s.name}:</Text>
-                  <Text style={{ color: colors.text, fontWeight: "700", fontSize: 12 }}>{formatted}</Text>
+                  <Text style={{ color: s.color, fontWeight: "800", fontSize: 13 }}>{formatted}</Text>
                 </View>
               );
             })}
           </View>
-          <Pressable onPress={() => setActiveIndex(null)} hitSlop={10} style={{ padding: 2 }}>
-            <Ionicons name="close-circle" size={17} color={colors.sub} />
+          <Pressable onPress={() => setActiveIndex(null)} hitSlop={12} style={{ padding: 2 }}>
+            <Ionicons name="close-circle" size={18} color={colors.sub} />
           </Pressable>
         </View>
       ) : (
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, marginBottom: 8, paddingVertical: 2 }}>
-          <Ionicons name="finger-print-outline" size={13} color={colors.sub} />
-          <Text style={{ color: colors.sub, fontSize: 11 }}>Tap any month on graph to inspect data</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 8, paddingVertical: 4 }}>
+          <Ionicons name="finger-print-outline" size={14} color={colors.primary} />
+          <Text style={{ color: colors.sub, fontSize: 11.5 }}>
+            Tap or slide on graph to inspect exact values
+          </Text>
         </View>
       )}
 
       {/* SVG Line Chart + Touch Overlay */}
-      <View style={{ width, height, position: "relative" }}>
+      <View
+        style={{ width, height, position: "relative" }}
+        onStartShouldSetResponder={() => true}
+        onMoveShouldSetResponder={() => true}
+        onResponderGrant={(evt) => handleTouchCoord(evt.nativeEvent.locationX)}
+        onResponderMove={(evt) => handleTouchCoord(evt.nativeEvent.locationX)}
+      >
         <Svg width={width} height={height}>
           <Axes width={width} height={height} min={min} max={max} labels={labels} colors={colors} />
 
@@ -209,16 +228,41 @@ export const LineChart = ({ labels = [], series = [], width, height = 210, forma
             );
           })}
 
-          {/* Active indicator points */}
+          {/* Active indicator points and floating callout badges */}
           {activeIndex !== null &&
             series.map((s) => {
               const v = s.values?.[activeIndex] ?? 0;
               const cx = x(activeIndex);
               const cy = y(v);
+              const formatted = formatValue ? formatValue(v) : inr(v);
+              const badgeW = Math.max(52, formatted.length * 7 + 10);
+              const badgeX = Math.min(width - PAD.r - badgeW, Math.max(PAD.l, cx - badgeW / 2));
+              const badgeY = cy > PAD.t + 28 ? cy - 26 : cy + 10;
+
               return (
                 <G key={s.name + "_active"}>
-                  <Circle cx={cx} cy={cy} r={8} fill={s.color} opacity={0.25} />
+                  <Circle cx={cx} cy={cy} r={9} fill={s.color} opacity={0.25} />
                   <Circle cx={cx} cy={cy} r={5} fill={colors.card} stroke={s.color} strokeWidth={2.5} />
+                  <Rect
+                    x={badgeX}
+                    y={badgeY}
+                    width={badgeW}
+                    height={18}
+                    rx={5}
+                    fill={isDark ? "rgba(15,23,42,0.95)" : "rgba(255,255,255,0.96)"}
+                    stroke={s.color}
+                    strokeWidth={1.2}
+                  />
+                  <SvgText
+                    x={badgeX + badgeW / 2}
+                    y={badgeY + 12.5}
+                    fontSize={10}
+                    fontWeight="bold"
+                    fill={s.color}
+                    textAnchor="middle"
+                  >
+                    {formatted}
+                  </SvgText>
                 </G>
               );
             })}
@@ -239,7 +283,12 @@ export const LineChart = ({ labels = [], series = [], width, height = 210, forma
           {labels.map((_, i) => (
             <Pressable
               key={i}
-              style={{ flex: 1, height: "100%" }}
+              style={{
+                flex: 1,
+                height: "100%",
+                backgroundColor: "rgba(0,0,0,0.001)",
+              }}
+              onPressIn={() => setActiveIndex(i)}
               onPress={() => setActiveIndex((prev) => (prev === i ? null : i))}
             />
           ))}
@@ -286,6 +335,12 @@ export const BarChart = ({
         : inr(activeVal)
       : null;
 
+  const handleTouchCoord = (coordX) => {
+    const relX = coordX - PAD.l;
+    const idx = Math.min(values.length - 1, Math.max(0, Math.floor(relX / slot)));
+    setActiveIndex(idx);
+  };
+
   return (
     <View style={{ width }}>
       {/* Interactive inspection banner above the chart */}
@@ -296,19 +351,19 @@ export const BarChart = ({
             alignItems: "center",
             justifyContent: "space-between",
             backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.04)",
-            paddingVertical: 7,
+            paddingVertical: 8,
             paddingHorizontal: 12,
-            borderRadius: 10,
+            borderRadius: 12,
             marginBottom: 8,
             borderWidth: 1,
-            borderColor: colors.border,
+            borderColor: colors.primary,
           }}
         >
           <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-            <Ionicons name="calendar-outline" size={14} color={color} />
+            <Ionicons name="calendar" size={14} color={color} />
             <Text style={{ color: colors.text, fontWeight: "800", fontSize: 13 }}>{activeLabel}</Text>
           </View>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
             {valueLabel ? <Text style={{ color: colors.sub, fontSize: 12 }}>{valueLabel}:</Text> : null}
             <Text
               style={{
@@ -320,21 +375,27 @@ export const BarChart = ({
               {formattedVal}
             </Text>
           </View>
-          <Pressable onPress={() => setActiveIndex(null)} hitSlop={10} style={{ padding: 2 }}>
-            <Ionicons name="close-circle" size={17} color={colors.sub} />
+          <Pressable onPress={() => setActiveIndex(null)} hitSlop={12} style={{ padding: 2 }}>
+            <Ionicons name="close-circle" size={18} color={colors.sub} />
           </Pressable>
         </View>
       ) : (
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, marginBottom: 8, paddingVertical: 2 }}>
-          <Ionicons name="finger-print-outline" size={13} color={colors.sub} />
-          <Text style={{ color: colors.sub, fontSize: 11 }}>
-            Tap any bar to view exact {valueLabel ? valueLabel.toLowerCase() : "amount"}
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 8, paddingVertical: 4 }}>
+          <Ionicons name="finger-print-outline" size={14} color={color} />
+          <Text style={{ color: colors.sub, fontSize: 11.5 }}>
+            Tap or slide on any bar to view exact {valueLabel ? valueLabel.toLowerCase() : "amount"}
           </Text>
         </View>
       )}
 
       {/* SVG Bar Chart + Touch Overlay */}
-      <View style={{ width, height, position: "relative" }}>
+      <View
+        style={{ width, height, position: "relative" }}
+        onStartShouldSetResponder={() => true}
+        onMoveShouldSetResponder={() => true}
+        onResponderGrant={(evt) => handleTouchCoord(evt.nativeEvent.locationX)}
+        onResponderMove={(evt) => handleTouchCoord(evt.nativeEvent.locationX)}
+      >
         <Svg width={width} height={height}>
           {[0, 1, 2, 3].map((t) => {
             const yy = PAD.t + (ih * t) / 3;
@@ -357,7 +418,7 @@ export const BarChart = ({
               width={slot}
               height={ih}
               rx={6}
-              fill={isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)"}
+              fill={isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.06)"}
             />
           )}
 
@@ -396,6 +457,42 @@ export const BarChart = ({
               </G>
             );
           })}
+
+          {/* Floating badge directly on top of touched bar */}
+          {activeIndex !== null && (() => {
+            const v = values[activeIndex];
+            const cx = PAD.l + slot * activeIndex + slot / 2;
+            const top = y(v);
+            const isNeg = v < 0;
+            const badgeW = Math.max(54, (formattedVal?.length || 5) * 7.5);
+            const badgeX = Math.min(width - PAD.r - badgeW, Math.max(PAD.l, cx - badgeW / 2));
+            const calloutY = isNeg ? Math.min(height - PAD.b - 20, top + 8) : Math.max(PAD.t + 4, top - 22);
+
+            return (
+              <G>
+                <Rect
+                  x={badgeX}
+                  y={calloutY}
+                  width={badgeW}
+                  height={18}
+                  rx={5}
+                  fill={isDark ? "rgba(15,23,42,0.95)" : "rgba(255,255,255,0.96)"}
+                  stroke={isNeg ? negativeColor : color}
+                  strokeWidth={1.5}
+                />
+                <SvgText
+                  x={badgeX + badgeW / 2}
+                  y={calloutY + 12.5}
+                  fontSize={10}
+                  fontWeight="bold"
+                  fill={isNeg ? negativeColor : color}
+                  textAnchor="middle"
+                >
+                  {formattedVal}
+                </SvgText>
+              </G>
+            );
+          })()}
         </Svg>
 
         {/* Touch Columns Overlay */}
@@ -413,7 +510,12 @@ export const BarChart = ({
           {values.map((_, i) => (
             <Pressable
               key={i}
-              style={{ flex: 1, height: "100%" }}
+              style={{
+                flex: 1,
+                height: "100%",
+                backgroundColor: "rgba(0,0,0,0.001)",
+              }}
+              onPressIn={() => setActiveIndex(i)}
               onPress={() => setActiveIndex((prev) => (prev === i ? null : i))}
             />
           ))}
