@@ -9,6 +9,7 @@ import InfoCard from "../../components/Cards/InfoCard";
 import { addThousandsSeparator } from "../../utils/helper";
 import { useNavigate } from "react-router-dom";
 import RecentTransactions from "../../components/Dashboard/RecentTransactions";
+import FinanceOverview from "../../components/Dashboard/FinanceOverview";
 import IncomeOverviewCard from "../../components/Dashboard/IncomeOverviewCard";
 import ExpenseOverviewCard from "../../components/Dashboard/ExpenseOverviewCard";
 import MonthSelector from "../../components/Dashboard/MonthSelector";
@@ -207,8 +208,19 @@ let Home = () => {
           <GoalsSnapshot />
         </div>
 
-        {/* Visual Analytics: Income Overview & Expense Overview side-by-side */}
-        <div className="stagger-children delay-150 grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 items-stretch">
+        {/* Visual Analytics: Financial Overview, Income Overview & Expense Overview */}
+        <div className="stagger-children delay-150 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8 items-stretch">
+          <FinanceOverview
+            totalBalance={
+              monthlyData?.totalSavings ?? dashboardData?.balance ?? 0
+            }
+            totalIncome={
+              monthlyData?.totalIncome ?? dashboardData?.totalIncome ?? 0
+            }
+            totalExpense={
+              monthlyData?.totalExpense ?? dashboardData?.totalExpense ?? 0
+            }
+          />
           <IncomeOverviewCard
             transactions={
               monthlyData?.monthlyTransactions?.filter(

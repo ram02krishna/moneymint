@@ -155,6 +155,15 @@ export default function DashboardScreen({ navigation }) {
     return top;
   }, [summary, tx]);
 
+  const financeOverviewData = useMemo(() => {
+    if (!summary && !income && !expense) return [];
+    return [
+      { name: "Total Balance", value: Math.max(0, savings), color: "#8b5cf6" },
+      { name: "Total Expenses", value: expense, color: "#ef4444" },
+      { name: "Total Income", value: income, color: "#10b981" },
+    ].filter((d) => d.value > 0);
+  }, [summary, savings, expense, income]);
+
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   const firstName = user?.fullName?.split(" ")[0] || "there";
@@ -257,6 +266,20 @@ export default function DashboardScreen({ navigation }) {
                 );
               })}
             </Card>
+          )}
+
+          {financeOverviewData.length > 0 && (
+            <>
+              <SectionTitle title="Financial overview" />
+              <Card>
+                <DonutChart
+                  data={financeOverviewData}
+                  centerLabel="Total balance"
+                  centerValue={inr(savings)}
+                />
+                <Legend data={financeOverviewData} />
+              </Card>
+            </>
           )}
 
           <SectionTitle title="Income overview" />

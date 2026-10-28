@@ -2,9 +2,9 @@ import React, { useMemo } from "react";
 import { LuPlus } from "react-icons/lu";
 import {
   prepareIncomeBarChartData,
-  prepareTitleAndCategoryData,
   CHART_COLORS,
   addThousandsSeparator,
+  capitalize,
 } from "../../utils/helper";
 import ChartJsBarChart from "../Charts/ChartJsBarChart";
 import ChartJsDoughnutChart from "../Charts/ChartJsDoughnutChart";
@@ -15,16 +15,19 @@ const IncomeOverview = ({ transactions, onAddIncome }) => {
     [transactions],
   );
 
-  const sourceChartData = useMemo(
-    () => prepareTitleAndCategoryData(transactions),
-    [transactions],
-  );
+  const sourceChartData = useMemo(() => {
+    const map = {};
+    (transactions || []).forEach((t) => {
+      const k = capitalize(t.source || t.category || "Other");
+      map[k] = (map[k] || 0) + (t.amount || 0);
+    });
+    return Object.entries(map)
+      .map(([name, amount]) => ({ name, amount }))
+      .sort((a, b) => b.amount - a.amount);
+  }, [transactions]);
 
   const totalIncomeValue = useMemo(() => {
-    return sourceChartData.reduce(
-      (sum, item) => sum + (item.amount || item.value || 0),
-      0,
-    );
+    return sourceChartData.reduce((sum, item) => sum + (item.amount || 0), 0);
   }, [sourceChartData]);
 
   const [chartView, setChartView] = React.useState("trend");
@@ -86,19 +89,25 @@ const IncomeOverview = ({ transactions, onAddIncome }) => {
           id="income-doughnut-chart"
           className={`${chartView === "source" ? "block" : "hidden"} lg:block bg-gray-50/50 dark:bg-gray-700/50 p-4 rounded-xl border border-gray-100 dark:border-gray-700 flex flex-col h-auto`}
         >
-          <h6 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-4">
-            Income Sources
-          </h6>
+          <div className="flex items-center justify-between mb-4">
+            <h6 className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+              Income Sources
+            </h6>
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400">
+              By Source
+            </span>
+          </div>
           <div className="flex flex-col h-full">
-            <div className="w-full h-[220px] lg:h-[300px] relative flex items-center justify-center shrink-0">
+            <div className="w-full h-[220px] lg:h-[260px] relative flex items-center justify-center shrink-0">
               {sourceChartData.length > 0 ? (
                 <>
                   <ChartJsDoughnutChart
                     data={sourceChartData}
+                    colors={CHART_COLORS}
                     showLegend={false}
                   />
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none p-6">
-                    <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">
+                    <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
                       Total Income
                     </span>
                     <span className="text-lg lg:text-2xl font-bold text-gray-900 dark:text-white mt-1">
@@ -112,28 +121,43 @@ const IncomeOverview = ({ transactions, onAddIncome }) => {
             </div>
 
             {sourceChartData.length > 0 && (
-              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2 overflow-y-auto max-h-[150px] custom-scrollbar pr-2">
-                {sourceChartData.map((item, index) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <span
-                      className="w-3 h-3 rounded-full shrink-0"
-                      style={{
-                        backgroundColor:
-                          CHART_COLORS[index % CHART_COLORS.length],
-                      }}
-                    ></span>
-                    <span
-                      className="text-xs text-gray-600 dark:text-gray-300 truncate"
-                      title={item.name}
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2 overflow-y-auto max-h-[160px] custom-scrollbar pr-2">
+                {sourceChartData.map((item, index) => {
+                  const pct =
+                    totalIncomeValue > 0
+                      ? Math.round((item.amount / totalIncomeValue) * 100)
+                      : 0;
+                  return (
+                    <div
+                      key={item.name}
+                      className="flex items-center justify-between gap-2 text-xs"
                     >
-                      {item.name}:{" "}
-                      {new Intl.NumberFormat("en-IN", {
-                        style: "currency",
-                        currency: "INR",
-                      }).format(item.amount || item.value)}
-                    </span>
-                  </div>
-                ))}
+                      <div className="flex items-center gap-2 truncate">
+                        <span
+                          className="w-2.5 h-2.5 rounded-full shrink-0"
+                          style={{
+                            backgroundColor:
+                              CHART_COLORS[index % CHART_COLORS.length],
+                          }}
+                        />
+                        <span
+                          className="text-gray-700 dark:text-gray-300 truncate font-medium"
+                          title={item.name}
+                        >
+                          {item.name}
+                        </span>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="font-bold text-gray-900 dark:text-white">
+                          ₹{addThousandsSeparator(item.amount)}
+                        </span>
+                        <span className="text-gray-400 dark:text-gray-500 ml-1">
+                          ({pct}%)
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

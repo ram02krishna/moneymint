@@ -1,8 +1,10 @@
 import React, { memo } from "react";
 import ChartJsDoughnutChart from "../Charts/ChartJsDoughnutChart";
-import { addThousandsSeparator, CHART_COLORS } from "../../utils/helper";
+import { addThousandsSeparator } from "../../utils/helper";
 
-const FinanceOverview = ({ totalBalance, totalIncome, totalExpense }) => {
+const FINANCE_COLORS = ["#8b5cf6", "#ef4444", "#10b981"];
+
+const FinanceOverview = ({ totalBalance = 0, totalIncome = 0, totalExpense = 0 }) => {
   const hasData = totalBalance !== 0 || totalIncome !== 0 || totalExpense !== 0;
 
   const balanceData = hasData
@@ -14,16 +16,20 @@ const FinanceOverview = ({ totalBalance, totalIncome, totalExpense }) => {
     : [];
 
   return (
-    <div className="card h-auto min-h-[450px] lg:min-h-[520px] transition-all duration-300 ease-in-out flex flex-col pb-6">
+    <div className="card h-auto min-h-[450px] transition-all duration-300 ease-in-out flex flex-col pb-6 w-full">
       <div className="flex items-center justify-between px-2 pt-2">
         <h5 className="text-lg font-semibold text-gray-900 dark:text-white">
           Financial Overview
         </h5>
+        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-purple-50 text-purple-600 dark:bg-purple-950/40 dark:text-purple-400">
+          Overview
+        </span>
       </div>
-      <div className="w-full h-[220px] lg:h-[300px] mt-4 relative flex items-center justify-center shrink-0">
+
+      <div className="w-full h-[220px] lg:h-[280px] mt-4 relative flex items-center justify-center shrink-0">
         <ChartJsDoughnutChart
           data={balanceData}
-          colors={CHART_COLORS}
+          colors={FINANCE_COLORS}
           showLegend={false}
         />
         {hasData && (
@@ -38,23 +44,37 @@ const FinanceOverview = ({ totalBalance, totalIncome, totalExpense }) => {
         )}
       </div>
 
-      <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-3 px-4">
-        {balanceData.map((item, index) => (
-          <div key={index} className="flex items-center gap-2">
-            <span
-              className="shrink-0 w-3 h-3 rounded-full"
-              style={{
-                backgroundColor: CHART_COLORS[index % CHART_COLORS.length],
-              }}
-            />
-            <span className="text-xs text-gray-600 dark:text-gray-300 truncate">
-              {item.name}: ₹{addThousandsSeparator(item.amount)}
-            </span>
-          </div>
-        ))}
-      </div>
+      {!hasData ? (
+        <div className="flex-1 flex items-center justify-center text-center text-sm text-gray-400 dark:text-gray-500 py-6">
+          No financial data for this month
+        </div>
+      ) : (
+        <div className="mt-6 flex flex-col gap-3 px-4 flex-1">
+          {balanceData.map((item, index) => (
+            <div key={item.name} className="flex items-center justify-between gap-2 text-xs">
+              <div className="flex items-center gap-2 truncate">
+                <span
+                  className="shrink-0 w-3 h-3 rounded-full"
+                  style={{
+                    backgroundColor: FINANCE_COLORS[index % FINANCE_COLORS.length],
+                  }}
+                />
+                <span className="text-gray-700 dark:text-gray-300 truncate font-medium">
+                  {item.name}
+                </span>
+              </div>
+              <div className="text-right shrink-0">
+                <span className="font-bold text-gray-900 dark:text-white">
+                  ₹{addThousandsSeparator(item.amount)}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
 
 export default memo(FinanceOverview);
+
