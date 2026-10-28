@@ -342,10 +342,6 @@ export const LineChart = ({ labels = [], series = [], width, height = 210, forma
     </View>
   );
 };
-      </View>
-    </View>
-  );
-};
 
 // ---------- bar chart (supports negatives, interactive touch) ----------
 export const BarChart = ({
