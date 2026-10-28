@@ -4,7 +4,8 @@ import {
   LuPencil,
   LuTrash2,
   LuTarget,
-  LuPiggyBank,
+  LuBanknote,
+  LuFlag,
   LuTrophy,
   LuCalendarClock,
   LuHandCoins,
@@ -144,13 +145,13 @@ const Goals = () => {
           <>
             <div className="stagger-children flex md:grid md:grid-cols-3 gap-6 mb-8 overflow-x-auto md:overflow-x-visible pb-4 md:pb-0 no-scrollbar snap-x snap-mandatory">
               <InfoCard
-                icon={<LuPiggyBank />}
+                icon={<LuBanknote />}
                 label="Total saved"
                 value={`₹${addThousandsSeparator(stats.saved)}`}
                 color="bg-green-500"
               />
               <InfoCard
-                icon={<LuTarget />}
+                icon={<LuFlag />}
                 label="Total target"
                 value={`₹${addThousandsSeparator(stats.target)}`}
                 color="bg-purple-500"

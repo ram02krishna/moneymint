@@ -243,14 +243,13 @@ const AddIncomeForm = ({ onAddIncome, closeModal, editingData = null }) => {
                       handleChange("category", c);
                       if (!income.source) handleChange("source", c);
                     }}
-                    className={`px-2.5 py-1 text-xs rounded-lg transition-all flex items-center gap-1.5 border cursor-pointer ${
+                    className={`px-3 py-1 text-xs rounded-lg transition-all border cursor-pointer ${
                       isSelected
                         ? "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 text-emerald-600 dark:text-emerald-400 font-semibold shadow-xs"
                         : "bg-gray-50 dark:bg-gray-800/60 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-400"
                     }`}
                   >
-                    <span>{emojiFor(c, "income")}</span>
-                    <span>{c}</span>
+                    {c}
                   </button>
                 );
               })}

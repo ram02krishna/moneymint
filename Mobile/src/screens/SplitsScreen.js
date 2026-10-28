@@ -5,7 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../theme";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
-import { Badge, Button, Card, Chip, ChipRow, EmptyState, Header, Input, Loading, Screen, SectionTitle, Sheet } from "../components/ui";
+import { Badge, Button, Card, Chip, ChipRow, EmptyState, Header, Input, Loading, Screen, SectionTitle, Sheet, StatTile } from "../components/ui";
 import client, { getErrorMessage } from "../api/client";
 import { API_PATHS } from "../api/paths";
 import { inr, shortDate } from "../utils/format";
@@ -303,46 +303,39 @@ export default function SplitsScreen({ navigation }) {
             ))}
           </View>
 
-          {/* Net balance tile */}
-          <View style={{ backgroundColor: colors.track, borderRadius: 14, padding: 14, marginTop: 14 }}>
-            <Text style={{ color: colors.sub, fontSize: 11, fontWeight: "700", letterSpacing: 0.5 }}>
-              YOUR NET BALANCE
-            </Text>
-            <Text style={{ fontSize: 26, color: currentBalance > 0 ? colors.success : currentBalance < 0 ? colors.danger : colors.text, fontWeight: "900", marginTop: 4 }}>
-              {currentBalance > 0 ? "+" : currentBalance < 0 ? "−" : ""}{money(Math.abs(currentBalance))}
-            </Text>
-            <Text style={{ color: colors.sub, fontSize: 12, marginTop: 2 }}>
-              {currentBalance > 0 ? "Owed to you in this group" : currentBalance < 0 ? "You owe in this group" : "All settled up"}
-            </Text>
+          {/* Summary Stat Cards matching Web */}
+          <View style={{ flexDirection: "row", gap: 8, marginTop: 14 }}>
+            <StatTile
+              icon="wallet"
+              label="Net balance"
+              value={currentBalance > 0 ? `+${money(currentBalance)}` : currentBalance < 0 ? `-${money(Math.abs(currentBalance))}` : "Settled"}
+              tint={currentBalance > 0 ? "#10b981" : currentBalance < 0 ? "#ef4444" : "#8b5cf6"}
+            />
+            <StatTile
+              icon="receipt"
+              label="Shared bills"
+              value={`${detail.expenses.length} Bills`}
+              tint="#8b5cf6"
+            />
+            <StatTile
+              icon="swap-horizontal"
+              label="Settlements"
+              value={`${detail.settlements.length} Settled`}
+              tint="#3b82f6"
+            />
           </View>
 
-          {/* Stats row */}
-          <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
-            <View style={{ flex: 1, borderWidth: 1, borderColor: colors.border, padding: 12, borderRadius: 12 }}>
-              <Text style={{ color: colors.sub, fontSize: 11, fontWeight: "600" }}>Bills</Text>
-              <Text style={{ color: colors.text, fontWeight: "800", fontSize: 17, marginTop: 2 }}>
-                {detail.expenses.length}
-              </Text>
-            </View>
-            <View style={{ flex: 1, borderWidth: 1, borderColor: colors.border, padding: 12, borderRadius: 12 }}>
-              <Text style={{ color: colors.sub, fontSize: 11, fontWeight: "600" }}>Settlements</Text>
-              <Text style={{ color: colors.text, fontWeight: "800", fontSize: 17, marginTop: 2 }}>
-                {detail.settlements.length}
-              </Text>
-            </View>
-          </View>
-
-          {/* Action buttons: Add Member + Record Bill */}
+          {/* Action buttons: Add friend + Add expense */}
           <View style={{ flexDirection: "row", gap: 10, marginTop: 14 }}>
             <Button
-              title="Add Member"
+              title="Add friend"
               variant="soft"
               icon="person-add-outline"
               onPress={() => setFriendOpen(true)}
               style={{ flex: 1 }}
             />
             <Button
-              title="Record Bill"
+              title="Add expense"
               variant="primary"
               icon="receipt-outline"
               onPress={() => setExpenseOpen(true)}
@@ -424,7 +417,7 @@ export default function SplitsScreen({ navigation }) {
 
         <SectionTitle title="Settle up" />
         <Card style={{ marginBottom: 16 }}>
-          {detail.suggestedDebts.length === 0 ? <Text style={{ color: colors.success, fontWeight: "600", textAlign: "center", paddingVertical: 12 }}>Everyone is settled up!</Text> : detail.suggestedDebts.map((debt, index) => <View key={`${debt.fromUserId}-${debt.toUserId}-${index}`} style={{ borderBottomWidth: index === detail.suggestedDebts.length - 1 ? 0 : 1, borderBottomColor: colors.border, paddingVertical: 12 }}><View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}><Text style={{ flex: 1, color: colors.text, fontWeight: "700", fontSize: 13 }}>{debt.fromName} → {debt.toName}</Text><Text style={{ color: colors.text, fontWeight: "900" }}>{money(debt.amount)}</Text></View><Button title="Record full or partial payment" variant="soft" onPress={() => setSettlementForm({ fromUserId: debt.fromUserId, toUserId: debt.toUserId, amount: String(debt.amount), note: "" })} style={{ marginTop: 10 }} /></View>)}
+          {detail.suggestedDebts.length === 0 ? <Text style={{ color: colors.success, fontWeight: "600", textAlign: "center", paddingVertical: 12 }}>Everyone is settled up!</Text> : detail.suggestedDebts.map((debt, index) => <View key={`${debt.fromUserId}-${debt.toUserId}-${index}`} style={{ borderBottomWidth: index === detail.suggestedDebts.length - 1 ? 0 : 1, borderBottomColor: colors.border, paddingVertical: 12 }}><View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}><Text style={{ flex: 1, color: colors.text, fontWeight: "700", fontSize: 13 }}>{debt.fromName} → {debt.toName}</Text><Text style={{ color: colors.text, fontWeight: "900" }}>{money(debt.amount)}</Text></View><Button title="Settle up" variant="soft" icon="swap-horizontal" onPress={() => setSettlementForm({ fromUserId: debt.fromUserId, toUserId: debt.toUserId, amount: String(debt.amount), note: "" })} style={{ marginTop: 10 }} /></View>)}
         </Card>
 
         <SectionTitle title="Transaction history" />

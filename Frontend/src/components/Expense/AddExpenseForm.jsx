@@ -211,14 +211,13 @@ const AddExpenseForm = ({ onAddExpense, closeModal, editingData = null }) => {
                       type="button"
                       key={c}
                       onClick={() => handleChange("category", c)}
-                      className={`px-2.5 py-1 text-xs rounded-lg transition-all flex items-center gap-1.5 border cursor-pointer ${
+                      className={`px-3 py-1 text-xs rounded-lg transition-all border cursor-pointer ${
                         isSelected
                           ? "bg-rose-50 dark:bg-rose-950/40 border-rose-500 text-rose-600 dark:text-rose-400 font-semibold shadow-xs"
                           : "bg-gray-50 dark:bg-gray-800/60 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-400"
                       }`}
                     >
-                      <span>{emojiFor(c, "expense")}</span>
-                      <span>{c}</span>
+                      {c}
                     </button>
                   );
                 })}
