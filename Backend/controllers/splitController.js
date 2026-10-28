@@ -6,7 +6,7 @@ const User = require("../models/User");
 const asyncHandler = require("../utils/asyncHandler");
 const AppError = require("../utils/AppError");
 const { validateObjectId } = require("../utils/queryValidator");
-const { toCents, fromCents, normalizeParticipants, getGroupLedger } = require("../services/splitLedger");
+const { toCents, fromCents, normalizeParticipants, buildBalances, getGroupLedger } = require("../services/splitLedger");
 
 const userSelect = "fullName email profileImageUrl";
 const populatedGroupQuery = (query) => query.populate("members.user", userSelect).populate("createdBy", userSelect);
@@ -48,13 +48,54 @@ exports.searchFriend = asyncHandler(async (req, res, next) => {
 });
 
 exports.listGroups = asyncHandler(async (req, res) => {
-  const groups = await populatedGroupQuery(ExpenseGroup.find({ "members.user": req.user.id }).sort({ updatedAt: -1 }));
-  const results = await Promise.all(groups.map(async (group) => {
+  const groups = await populatedGroupQuery(
+    ExpenseGroup.find({ "members.user": req.user.id }).sort({ updatedAt: -1 })
+  );
+
+  if (!groups.length) {
+    return res.status(200).json({ status: "success", results: 0, data: { groups: [] } });
+  }
+
+  const groupIds = groups.map((g) => g._id);
+  const [allExpenses, allSettlements] = await Promise.all([
+    SharedExpense.find({ group: { $in: groupIds } })
+      .select("group amount paidBy participants.user participants.amount")
+      .lean(),
+    Settlement.find({ group: { $in: groupIds } })
+      .select("group amount from to")
+      .lean(),
+  ]);
+
+  const expensesByGroup = new Map();
+  allExpenses.forEach((exp) => {
+    const gid = String(exp.group);
+    if (!expensesByGroup.has(gid)) expensesByGroup.set(gid, []);
+    expensesByGroup.get(gid).push(exp);
+  });
+
+  const settlementsByGroup = new Map();
+  allSettlements.forEach((stl) => {
+    const gid = String(stl.group);
+    if (!settlementsByGroup.has(gid)) settlementsByGroup.set(gid, []);
+    settlementsByGroup.get(gid).push(stl);
+  });
+
+  const currentUserId = String(req.user.id);
+  const results = groups.map((group) => {
     const shaped = shapeGroup(group);
-    const ledger = await getGroupLedger(group._id, group.members);
-    const myBalance = ledger.balances.find((item) => item.userId === String(req.user.id));
-    return { ...shaped, myBalance: myBalance?.balance || 0, balanceLabel: (myBalance?.balance || 0) > 0 ? "owed to you" : (myBalance?.balance || 0) < 0 ? "you owe" : "settled" };
-  }));
+    const gid = String(group._id);
+    const groupExpenses = expensesByGroup.get(gid) || [];
+    const groupSettlements = settlementsByGroup.get(gid) || [];
+    const balances = buildBalances(group.members, groupExpenses, groupSettlements);
+    const myBalanceItem = balances.find((item) => item.userId === currentUserId);
+    const myBalance = myBalanceItem?.balance || 0;
+    return {
+      ...shaped,
+      myBalance,
+      balanceLabel: myBalance > 0 ? "owed to you" : myBalance < 0 ? "you owe" : "settled",
+    };
+  });
+
   res.status(200).json({ status: "success", results: results.length, data: { groups: results } });
 });
 
@@ -173,4 +214,21 @@ exports.createSettlement = asyncHandler(async (req, res, next) => {
     createdBy: req.user.id,
   });
   res.status(201).json({ status: "success", data: { settlement } });
+});
+
+exports.deleteGroup = asyncHandler(async (req, res) => {
+  const group = await getGroupOrFail(req.params.id, req.user.id);
+
+  // Cascade delete group and all associated transactions
+  await Promise.all([
+    SharedExpense.deleteMany({ group: group._id }),
+    Settlement.deleteMany({ group: group._id }),
+    ExpenseGroup.findByIdAndDelete(group._id),
+  ]);
+
+  res.status(200).json({
+    status: "success",
+    message: "Group deleted successfully",
+    data: null,
+  });
 });

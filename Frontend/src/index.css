@@ -458,9 +458,7 @@
   }
 
   .glass-bar {
-    @apply bg-white/80 dark:bg-gray-800/80 border-b border-gray-100 dark:border-gray-700;
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
+    @apply bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm;
   }
 
   .brand-mark {

@@ -51,6 +51,7 @@ export let API_PATHS = {
   SPLITS: {
     GROUPS: "/api/v1/splits/groups",
     GROUP: (groupId) => `/api/v1/splits/groups/${groupId}`,
+    DELETE_GROUP: (groupId) => `/api/v1/splits/groups/${groupId}`,
     ADD_MEMBER: (groupId) => `/api/v1/splits/groups/${groupId}/members`,
     ADD_EXPENSE: (groupId) => `/api/v1/splits/groups/${groupId}/expenses`,
     SETTLE: (groupId) => `/api/v1/splits/groups/${groupId}/settlements`,

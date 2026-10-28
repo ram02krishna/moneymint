@@ -24,7 +24,7 @@ const Navbar = ({ activeMenu }) => {
   }, [openSideMenu]);
 
   return (
-    <div className="glass-bar flex items-center justify-between py-3 px-4 md:px-6 fixed top-0 left-0 w-full z-50 transition-all duration-300">
+    <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm flex items-center justify-between py-3 px-4 md:px-6 fixed top-0 left-0 w-full z-50 transition-all duration-300">
       <div className="flex items-center gap-3">
         <button
           className="block lg:hidden text-gray-600 dark:text-gray-300 p-2 rounded-lg transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900"
@@ -93,10 +93,10 @@ const Navbar = ({ activeMenu }) => {
       {openSideMenu && (
         <>
           <div
-            className="fixed inset-0 top-[61px] bg-black/40 backdrop-blur-sm z-40 lg:hidden transition-all duration-300"
+            className="fixed inset-0 top-[61px] bg-black/40 z-40 lg:hidden transition-all duration-300"
             onClick={() => setOpenSideMenu(false)}
           />
-          <div className="fixed top-[61px] left-0 w-64 h-[calc(100vh-61px)] bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl shadow-2xl z-50 lg:hidden animate-slide-right">
+          <div className="fixed top-[61px] left-0 w-64 h-[calc(100vh-61px)] bg-white dark:bg-gray-800 shadow-2xl z-50 lg:hidden animate-slide-right">
             <SideMenu
               activeMenu={activeMenu}
               onClose={() => setOpenSideMenu(false)}
