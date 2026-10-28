@@ -12,6 +12,7 @@ import {
 } from "chart.js";
 import { Line } from "react-chartjs-2";
 import { ThemeContext } from "../../context/ThemeContext";
+import { addThousandsSeparator } from "../../utils/helper";
 
 ChartJS.register(
   CategoryScale,
@@ -24,7 +25,7 @@ ChartJS.register(
   Filler,
 );
 
-const ChartJsLineChart = ({ data }) => {
+const ChartJsLineChart = ({ data, label = "Expense", color = "#ef4444" }) => {
   const { theme } = useContext(ThemeContext);
   const isDark = theme === "dark";
 
@@ -40,23 +41,23 @@ const ChartJsLineChart = ({ data }) => {
     labels: data.map((item) => item?.name || item?.month || item?.category),
     datasets: [
       {
-        label: "Amount",
+        label: label,
         data: data.map((item) => item.amount),
-        borderColor: "#8b5cf6",
+        borderColor: color,
         backgroundColor: (context) => {
           if (!context.chart.chartArea) {
-            return "rgba(139, 92, 246, 0.2)";
+            return color + "22";
           }
           const ctx = context.chart.ctx;
-          const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-          gradient.addColorStop(0, "rgba(139, 92, 246, 0.5)");
-          gradient.addColorStop(1, "rgba(139, 92, 246, 0)");
+          const gradient = ctx.createLinearGradient(0, 0, 0, 320);
+          gradient.addColorStop(0, color + "55");
+          gradient.addColorStop(1, color + "00");
           return gradient;
         },
-        tension: 0.4,
+        tension: 0.35,
         fill: true,
         pointBackgroundColor: isDark ? "#1e293b" : "#fff",
-        pointBorderColor: "#8b5cf6",
+        pointBorderColor: color,
         pointBorderWidth: 2,
         pointRadius: 4,
         pointHoverRadius: 6,
@@ -65,35 +66,42 @@ const ChartJsLineChart = ({ data }) => {
   };
 
   const tickColor = isDark ? "#94a3b8" : "#6b7280";
-  const gridColor = isDark ? "rgba(148,163,184,0.12)" : "#f3f4f6";
+  const gridColor = isDark ? "rgba(148,163,184,0.12)" : "rgba(226,232,240,0.6)";
 
   const options = {
     responsive: true,
     maintainAspectRatio: false,
-    animation: { duration: 1000, easing: "easeOutQuart" },
+    animation: { duration: 600, easing: "easeOutQuart" },
     plugins: {
-      legend: { display: false },
+      legend: {
+        display: true,
+        position: "top",
+        align: "end",
+        labels: {
+          color: isDark ? "#e2e8f0" : "#4b5563",
+          usePointStyle: true,
+          boxWidth: 8,
+          boxHeight: 8,
+          font: { family: "'Plus Jakarta Sans', sans-serif", size: 12, weight: "600" },
+          padding: 12,
+        },
+      },
       tooltip: {
         backgroundColor: isDark
-          ? "rgba(15,23,42,0.95)"
-          : "rgba(255,255,255,0.97)",
-        titleColor: isDark ? "#f1f5f9" : "#1f2937",
+          ? "rgba(15,23,42,0.96)"
+          : "rgba(255,255,255,0.98)",
+        titleColor: isDark ? "#f1f5f9" : "#0f172a",
         bodyColor: isDark ? "#cbd5e1" : "#374151",
         borderColor: isDark ? "#334155" : "#e5e7eb",
         borderWidth: 1,
         padding: 10,
-        displayColors: false,
+        displayColors: true,
+        usePointStyle: true,
         callbacks: {
           label: function (context) {
-            let label = context.dataset.label || "";
-            if (label) label += ": ";
-            if (context.parsed.y !== null) {
-              label += new Intl.NumberFormat("en-IN", {
-                style: "currency",
-                currency: "INR",
-              }).format(context.parsed.y);
-            }
-            return label;
+            let itemLabel = context.dataset.label || "Amount";
+            const val = context.parsed.y ?? context.raw ?? 0;
+            return ` ${itemLabel}: ₹${addThousandsSeparator(val)}`;
           },
         },
       },
@@ -103,16 +111,22 @@ const ChartJsLineChart = ({ data }) => {
         grid: { display: false, drawBorder: false },
         ticks: {
           color: tickColor,
-          font: { family: "'Plus Jakarta Sans', sans-serif", size: 11 },
+          font: { family: "'Plus Jakarta Sans', sans-serif", size: 11, weight: "500" },
         },
         border: { display: false },
       },
       y: {
-        grid: { color: gridColor, borderDash: [5, 5] },
+        grid: { color: gridColor, borderDash: [4, 4] },
         ticks: {
           color: tickColor,
           font: { family: "'Plus Jakarta Sans', sans-serif", size: 11 },
-          callback: (value) => "₹" + value,
+          callback: (value) => {
+            const a = Math.abs(value);
+            if (a >= 10000000) return "₹" + (value / 10000000).toFixed(1) + "Cr";
+            if (a >= 100000) return "₹" + (value / 100000).toFixed(1) + "L";
+            if (a >= 1000) return "₹" + addThousandsSeparator(value);
+            return "₹" + value;
+          },
         },
         border: { display: false },
       },

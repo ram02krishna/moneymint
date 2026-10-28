@@ -80,7 +80,7 @@ const IncomeOverview = ({ transactions, onAddIncome }) => {
             Income Trend
           </h6>
           <div className="h-[220px] lg:h-[300px]">
-            <ChartJsBarChart data={barChartData} />
+            <ChartJsBarChart data={barChartData} label="Income" color="#10b981" />
           </div>
         </div>
 

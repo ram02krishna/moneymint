@@ -33,7 +33,7 @@ export let addThousandsSeparator = (num) => {
 };
 
 export let prepareExpenseLineChartData = (data = []) => {
-  if (!Array.isArray(data)) {
+  if (!Array.isArray(data) || data.length === 0) {
     return [];
   }
 
@@ -41,27 +41,37 @@ export let prepareExpenseLineChartData = (data = []) => {
     (a, b) => new Date(a.date) - new Date(b.date),
   );
 
-  let chartData = [];
+  let dayMap = {};
   for (let i = 0; i < sortedData.length; i++) {
     let item = sortedData[i];
-    if (item) {
-      chartData.push({
-        month: new Date(item.date).toLocaleDateString("en-GB", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-        }),
-        amount: item.amount,
-        category: item.category,
-      });
+    if (!item) continue;
+    let d = new Date(item.date);
+    if (isNaN(d.getTime())) continue;
+
+    let dayKey = d.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+    });
+
+    if (!dayMap[dayKey]) {
+      dayMap[dayKey] = 0;
     }
+    dayMap[dayKey] += item.amount || 0;
+  }
+
+  let chartData = [];
+  for (let dateStr in dayMap) {
+    chartData.push({
+      month: dateStr,
+      amount: dayMap[dateStr],
+    });
   }
 
   return chartData;
 };
 
 export let prepareIncomeBarChartData = (data = []) => {
-  if (!Array.isArray(data)) {
+  if (!Array.isArray(data) || data.length === 0) {
     return [];
   }
 
@@ -69,17 +79,29 @@ export let prepareIncomeBarChartData = (data = []) => {
     (a, b) => new Date(a.date) - new Date(b.date),
   );
 
-  let chartData = [];
+  let dayMap = {};
   for (let i = 0; i < sortedData.length; i++) {
     let item = sortedData[i];
+    if (!item) continue;
+    let d = new Date(item.date);
+    if (isNaN(d.getTime())) continue;
+
+    let dayKey = d.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+    });
+
+    if (!dayMap[dayKey]) {
+      dayMap[dayKey] = 0;
+    }
+    dayMap[dayKey] += item.amount || 0;
+  }
+
+  let chartData = [];
+  for (let dateStr in dayMap) {
     chartData.push({
-      month: new Date(item?.date).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      }),
-      amount: item?.amount,
-      source: item?.source,
+      month: dateStr,
+      amount: dayMap[dateStr],
     });
   }
 

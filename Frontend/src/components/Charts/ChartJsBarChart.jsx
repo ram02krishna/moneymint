@@ -10,6 +10,7 @@ import {
 } from "chart.js";
 import { Bar } from "react-chartjs-2";
 import { ThemeContext } from "../../context/ThemeContext";
+import { addThousandsSeparator } from "../../utils/helper";
 
 ChartJS.register(
   CategoryScale,
@@ -20,7 +21,7 @@ ChartJS.register(
   Legend,
 );
 
-const ChartJsBarChart = ({ data }) => {
+const ChartJsBarChart = ({ data, label = "Income", color = "#10b981" }) => {
   const { theme } = useContext(ThemeContext);
   const isDark = theme === "dark";
 
@@ -36,13 +37,14 @@ const ChartJsBarChart = ({ data }) => {
 
   const datasets = [
     {
-      label: "Budget",
+      label: label,
       data: data.map((item) => item.amount),
-      backgroundColor: "#8b5cf6",
-      borderRadius: 4,
+      backgroundColor: color,
+      hoverBackgroundColor: color + "dd",
+      borderRadius: 6,
       borderSkipped: false,
-      barThickness: hasActual ? 20 : 40,
-      maxBarThickness: 50,
+      barThickness: data.length <= 3 ? 36 : hasActual ? 20 : undefined,
+      maxBarThickness: 48,
     },
   ];
 
@@ -51,10 +53,10 @@ const ChartJsBarChart = ({ data }) => {
       label: "Actual",
       data: data.map((item) => item.actual),
       backgroundColor: "#f59e0b",
-      borderRadius: 4,
+      borderRadius: 6,
       borderSkipped: false,
       barThickness: 20,
-      maxBarThickness: 50,
+      maxBarThickness: 48,
     });
   }
 
@@ -66,12 +68,12 @@ const ChartJsBarChart = ({ data }) => {
   };
 
   const tickColor = isDark ? "#94a3b8" : "#6b7280";
-  const gridColor = isDark ? "rgba(148,163,184,0.12)" : "#f3f4f6";
+  const gridColor = isDark ? "rgba(148,163,184,0.12)" : "rgba(226,232,240,0.6)";
 
   const options = {
     responsive: true,
     maintainAspectRatio: false,
-    animation: { duration: 1000, easing: "easeOutQuart" },
+    animation: { duration: 600, easing: "easeOutQuart" },
     plugins: {
       legend: {
         display: true,
@@ -81,30 +83,27 @@ const ChartJsBarChart = ({ data }) => {
           color: isDark ? "#e2e8f0" : "#4b5563",
           usePointStyle: true,
           boxWidth: 8,
-          font: { size: 11 },
+          boxHeight: 8,
+          font: { family: "'Plus Jakarta Sans', sans-serif", size: 12, weight: "600" },
+          padding: 12,
         },
       },
       tooltip: {
         backgroundColor: isDark
-          ? "rgba(15,23,42,0.95)"
-          : "rgba(255,255,255,0.97)",
+          ? "rgba(15,23,42,0.96)"
+          : "rgba(255,255,255,0.98)",
         titleColor: isDark ? "#f1f5f9" : "#1f2937",
         bodyColor: isDark ? "#cbd5e1" : "#374151",
         borderColor: isDark ? "#334155" : "#e5e7eb",
         borderWidth: 1,
         padding: 10,
         displayColors: true,
+        usePointStyle: true,
         callbacks: {
           label: function (context) {
-            let label = context.dataset.label || "";
-            if (label) label += ": ";
-            if (context.parsed.y !== null) {
-              label += new Intl.NumberFormat("en-IN", {
-                style: "currency",
-                currency: "INR",
-              }).format(context.parsed.y);
-            }
-            return label;
+            let itemLabel = context.dataset.label || "Amount";
+            const val = context.parsed.y ?? context.raw ?? 0;
+            return ` ${itemLabel}: ₹${addThousandsSeparator(val)}`;
           },
         },
       },
@@ -114,16 +113,22 @@ const ChartJsBarChart = ({ data }) => {
         grid: { display: false, drawBorder: false },
         ticks: {
           color: tickColor,
-          font: { family: "'Plus Jakarta Sans', sans-serif", size: 11 },
+          font: { family: "'Plus Jakarta Sans', sans-serif", size: 11, weight: "500" },
         },
         border: { display: false },
       },
       y: {
-        grid: { color: gridColor, borderDash: [5, 5] },
+        grid: { color: gridColor, borderDash: [4, 4] },
         ticks: {
           color: tickColor,
           font: { family: "'Plus Jakarta Sans', sans-serif", size: 11 },
-          callback: (value) => "₹" + value,
+          callback: (value) => {
+            const a = Math.abs(value);
+            if (a >= 10000000) return "₹" + (value / 10000000).toFixed(1) + "Cr";
+            if (a >= 100000) return "₹" + (value / 100000).toFixed(1) + "L";
+            if (a >= 1000) return "₹" + addThousandsSeparator(value);
+            return "₹" + value;
+          },
         },
         border: { display: false },
       },

@@ -78,7 +78,7 @@ const ExpenseOverview = ({ transactions, onAddExpense }) => {
             Spending Trend
           </h6>
           <div className="h-[220px] lg:h-[300px]">
-            <ChartJsLineChart data={lineChartData} />
+            <ChartJsLineChart data={lineChartData} label="Expense" color="#ef4444" />
           </div>
         </div>
 
