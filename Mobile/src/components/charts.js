@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import React, { useCallback, useMemo, useRef, useState } from "react";
+import { PanResponder, Pressable, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Svg, { Circle, G, Line, Path, Rect, Text as SvgText } from "react-native-svg";
 import { useTheme } from "../theme";
@@ -118,31 +118,60 @@ const Axes = ({ width, height, min, max, labels, colors }) => {
 export const LineChart = ({ labels = [], series = [], width, height = 210, formatValue }) => {
   const { colors, isDark } = useTheme();
   const [activeIndex, setActiveIndex] = useState(null);
-
-  if (!labels.length || !series.length) {
-    return null;
-  }
+  const initialXRef = useRef(0);
 
   const all = series.flatMap((s) => s.values || []);
   const max = Math.max(1, ...all);
   const min = Math.min(0, ...all);
   const iw = Math.max(10, width - PAD.l - PAD.r);
   const ih = height - PAD.t - PAD.b;
-  const x = (i) => PAD.l + (labels.length === 1 ? iw / 2 : (iw * i) / (labels.length - 1));
+  const x = (i) => PAD.l + (labels.length === 1 ? iw / 2 : (iw * i) / Math.max(1, labels.length - 1));
   const y = (v) => PAD.t + ih - ((v - min) / (max - min || 1)) * ih;
 
-  const activeLabel = activeIndex !== null ? labels[activeIndex] : null;
+  const handleTouchCoord = useCallback(
+    (coordX) => {
+      const relX = coordX - PAD.l;
+      if (labels.length <= 1) {
+        setActiveIndex(0);
+        return;
+      }
+      const step = iw / (labels.length - 1);
+      const idx = Math.min(labels.length - 1, Math.max(0, Math.round(relX / step)));
+      setActiveIndex(idx);
+    },
+    [labels.length, iw]
+  );
 
-  const handleTouchCoord = (coordX) => {
-    const relX = coordX - PAD.l;
-    if (labels.length <= 1) {
-      setActiveIndex(0);
-      return;
-    }
-    const step = iw / (labels.length - 1);
-    const idx = Math.min(labels.length - 1, Math.max(0, Math.round(relX / step)));
-    setActiveIndex(idx);
-  };
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onStartShouldSetPanResponderCapture: () => false,
+        onMoveShouldSetPanResponder: (_, gestureState) => {
+          return Math.abs(gestureState.dx) > Math.abs(gestureState.dy) && Math.abs(gestureState.dx) > 3;
+        },
+        onMoveShouldSetPanResponderCapture: (_, gestureState) => {
+          return Math.abs(gestureState.dx) > Math.abs(gestureState.dy) && Math.abs(gestureState.dx) > 3;
+        },
+        onPanResponderGrant: (evt) => {
+          const locX = evt.nativeEvent.locationX;
+          initialXRef.current = locX;
+          handleTouchCoord(locX);
+        },
+        onPanResponderMove: (_, gestureState) => {
+          handleTouchCoord(initialXRef.current + gestureState.dx);
+        },
+        onPanResponderTerminationRequest: () => true,
+        onPanResponderRelease: () => {},
+      }),
+    [handleTouchCoord]
+  );
+
+  if (!labels.length || !series.length) {
+    return null;
+  }
+
+  const activeLabel = activeIndex !== null ? labels[activeIndex] : null;
 
   return (
     <View style={{ width }}>
@@ -192,13 +221,10 @@ export const LineChart = ({ labels = [], series = [], width, height = 210, forma
         </View>
       )}
 
-      {/* SVG Line Chart + Touch Overlay */}
+      {/* SVG Line Chart + Touch Container */}
       <View
         style={{ width, height, position: "relative" }}
-        onStartShouldSetResponder={() => true}
-        onMoveShouldSetResponder={() => true}
-        onResponderGrant={(evt) => handleTouchCoord(evt.nativeEvent.locationX)}
-        onResponderMove={(evt) => handleTouchCoord(evt.nativeEvent.locationX)}
+        {...panResponder.panHandlers}
       >
         <Svg width={width} height={height}>
           <Axes width={width} height={height} min={min} max={max} labels={labels} colors={colors} />
@@ -267,32 +293,6 @@ export const LineChart = ({ labels = [], series = [], width, height = 210, forma
               );
             })}
         </Svg>
-
-        {/* Touch Columns Overlay */}
-        <View
-          style={{
-            position: "absolute",
-            left: PAD.l,
-            top: 0,
-            width: iw,
-            height: height - PAD.b,
-            flexDirection: "row",
-          }}
-          pointerEvents="box-none"
-        >
-          {labels.map((_, i) => (
-            <Pressable
-              key={i}
-              style={{
-                flex: 1,
-                height: "100%",
-                backgroundColor: "rgba(0,0,0,0.001)",
-              }}
-              onPressIn={() => setActiveIndex(i)}
-              onPress={() => setActiveIndex((prev) => (prev === i ? null : i))}
-            />
-          ))}
-        </View>
       </View>
     </View>
   );
@@ -311,20 +311,59 @@ export const BarChart = ({
 }) => {
   const { colors, isDark } = useTheme();
   const [activeIndex, setActiveIndex] = useState(null);
-
-  if (!labels.length || !values.length) {
-    return null;
-  }
+  const initialXRef = useRef(0);
 
   const max = Math.max(1, ...values, 0);
   const min = Math.min(0, ...values);
   const iw = Math.max(10, width - PAD.l - PAD.r);
   const ih = height - PAD.t - PAD.b;
-  const slot = iw / values.length;
+  const slot = iw / Math.max(1, values.length);
   const bw = Math.min(26, slot * 0.62);
   const y = (v) => PAD.t + ih - ((v - min) / (max - min || 1)) * ih;
   const zero = y(0);
   const every = Math.ceil(values.length / 7);
+
+  const handleTouchCoord = useCallback(
+    (coordX) => {
+      const relX = coordX - PAD.l;
+      if (values.length <= 1) {
+        setActiveIndex(0);
+        return;
+      }
+      const idx = Math.min(values.length - 1, Math.max(0, Math.floor(relX / slot)));
+      setActiveIndex(idx);
+    },
+    [values.length, slot]
+  );
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onStartShouldSetPanResponderCapture: () => false,
+        onMoveShouldSetPanResponder: (_, gestureState) => {
+          return Math.abs(gestureState.dx) > Math.abs(gestureState.dy) && Math.abs(gestureState.dx) > 3;
+        },
+        onMoveShouldSetPanResponderCapture: (_, gestureState) => {
+          return Math.abs(gestureState.dx) > Math.abs(gestureState.dy) && Math.abs(gestureState.dx) > 3;
+        },
+        onPanResponderGrant: (evt) => {
+          const locX = evt.nativeEvent.locationX;
+          initialXRef.current = locX;
+          handleTouchCoord(locX);
+        },
+        onPanResponderMove: (_, gestureState) => {
+          handleTouchCoord(initialXRef.current + gestureState.dx);
+        },
+        onPanResponderTerminationRequest: () => true,
+        onPanResponderRelease: () => {},
+      }),
+    [handleTouchCoord]
+  );
+
+  if (!labels.length || !values.length) {
+    return null;
+  }
 
   const activeLabel = activeIndex !== null ? labels[activeIndex] : null;
   const activeVal = activeIndex !== null ? values[activeIndex] : null;
@@ -334,12 +373,6 @@ export const BarChart = ({
         ? formatValue(activeVal)
         : inr(activeVal)
       : null;
-
-  const handleTouchCoord = (coordX) => {
-    const relX = coordX - PAD.l;
-    const idx = Math.min(values.length - 1, Math.max(0, Math.floor(relX / slot)));
-    setActiveIndex(idx);
-  };
 
   return (
     <View style={{ width }}>
@@ -388,13 +421,10 @@ export const BarChart = ({
         </View>
       )}
 
-      {/* SVG Bar Chart + Touch Overlay */}
+      {/* SVG Bar Chart + Touch Container */}
       <View
         style={{ width, height, position: "relative" }}
-        onStartShouldSetResponder={() => true}
-        onMoveShouldSetResponder={() => true}
-        onResponderGrant={(evt) => handleTouchCoord(evt.nativeEvent.locationX)}
-        onResponderMove={(evt) => handleTouchCoord(evt.nativeEvent.locationX)}
+        {...panResponder.panHandlers}
       >
         <Svg width={width} height={height}>
           {[0, 1, 2, 3].map((t) => {
@@ -409,6 +439,19 @@ export const BarChart = ({
               </G>
             );
           })}
+
+          {/* Zero baseline when negative values exist */}
+          {min < 0 && (
+            <Line
+              x1={PAD.l}
+              x2={width - PAD.r}
+              y1={zero}
+              y2={zero}
+              stroke={colors.sub}
+              strokeWidth={1}
+              strokeDasharray="2 2"
+            />
+          )}
 
           {/* Active column highlight pillar */}
           {activeIndex !== null && (
@@ -427,7 +470,7 @@ export const BarChart = ({
             const top = Math.min(y(v), zero);
             const h = Math.max(2, Math.abs(y(v) - zero));
             const isSelected = activeIndex === i;
-            const barOpacity = activeIndex !== null ? (isSelected ? 1 : 0.35) : 1;
+            const barOpacity = activeIndex !== null ? (isSelected ? 1 : 0.4) : 1;
 
             return (
               <G key={i}>
@@ -494,32 +537,6 @@ export const BarChart = ({
             );
           })()}
         </Svg>
-
-        {/* Touch Columns Overlay */}
-        <View
-          style={{
-            position: "absolute",
-            left: PAD.l,
-            top: 0,
-            width: iw,
-            height: height - PAD.b,
-            flexDirection: "row",
-          }}
-          pointerEvents="box-none"
-        >
-          {values.map((_, i) => (
-            <Pressable
-              key={i}
-              style={{
-                flex: 1,
-                height: "100%",
-                backgroundColor: "rgba(0,0,0,0.001)",
-              }}
-              onPressIn={() => setActiveIndex(i)}
-              onPress={() => setActiveIndex((prev) => (prev === i ? null : i))}
-            />
-          ))}
-        </View>
       </View>
     </View>
   );

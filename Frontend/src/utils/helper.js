@@ -86,49 +86,6 @@ export let prepareIncomeBarChartData = (data = []) => {
   return chartData;
 };
 
-export let prepareCategoryData = (data = [], key = "category") => {
-  if (!Array.isArray(data)) return [];
-
-  let grouped = {};
-  for (let i = 0; i < data.length; i++) {
-    let item = data[i];
-    let label = item[key] || "Other";
-    if (!grouped[label]) {
-      grouped[label] = 0;
-    }
-    grouped[label] += item.amount || 0;
-  }
-
-  let result = [];
-  for (let label in grouped) {
-    result.push({ name: label, amount: grouped[label] });
-  }
-
-  return result;
-};
-
-export let prepareTitleAndCategoryData = (data = []) => {
-  if (!Array.isArray(data)) return [];
-
-  let grouped = {};
-  for (let i = 0; i < data.length; i++) {
-    let item = data[i];
-    if (!item) continue;
-    let label = `${item.title || "Unknown"} (${item.category || item.source || "N/A"})`;
-    if (!grouped[label]) {
-      grouped[label] = 0;
-    }
-    grouped[label] += item.amount || 0;
-  }
-
-  let result = [];
-  for (let label in grouped) {
-    result.push({ name: label, amount: grouped[label] });
-  }
-
-  return result;
-};
-
 export const CHART_COLORS = [
   "#875CF5",
   "#FA2C37",
