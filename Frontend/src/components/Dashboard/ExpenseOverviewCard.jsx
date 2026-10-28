@@ -82,3 +82,4 @@ const ExpenseOverviewCard = ({ transactions = [], totalExpense = 0 }) => {
 };
 
 export default memo(ExpenseOverviewCard);
+

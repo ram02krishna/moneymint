@@ -1,12 +1,12 @@
 import {
   LuLayoutDashboard,
-  LuHandCoins,
-  LuWalletMinimal,
+  LuCircleArrowDown,
+  LuCircleArrowUp,
   LuLogOut,
   LuSettings,
   LuArrowRightLeft,
-  LuTrendingUp,
-  LuPiggyBank,
+  LuChartColumn,
+  LuChartPie,
   LuTarget,
   LuUsers,
 } from "react-icons/lu";
@@ -21,13 +21,13 @@ export let SIDE_MENU_DATA = [
   {
     id: "02",
     label: "Income",
-    icon: LuWalletMinimal,
+    icon: LuCircleArrowDown,
     path: "/income",
   },
   {
     id: "03",
     label: "Expense",
-    icon: LuHandCoins,
+    icon: LuCircleArrowUp,
     path: "/expense",
   },
   {
@@ -39,13 +39,13 @@ export let SIDE_MENU_DATA = [
   {
     id: "05",
     label: "Monthly Analytics",
-    icon: LuTrendingUp,
+    icon: LuChartColumn,
     path: "/monthly-analytics",
   },
   {
     id: "06",
     label: "Budgets",
-    icon: LuPiggyBank,
+    icon: LuChartPie,
     path: "/budgets",
     isNew: true,
   },

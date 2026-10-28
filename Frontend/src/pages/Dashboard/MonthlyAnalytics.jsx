@@ -11,10 +11,10 @@ import LoadingSpinner from "../../components/LoadingSpinner";
 import { addThousandsSeparator } from "../../utils/helper";
 import { getCachedData, setCachedData } from "../../utils/apiCache";
 import {
-  MdAccountBalanceWallet,
-  MdTrendingUp,
-  MdTrendingDown,
-} from "react-icons/md";
+  LuCircleArrowDown,
+  LuCircleArrowUp,
+  LuWallet,
+} from "react-icons/lu";
 
 const MonthlyAnalyticsPage = () => {
   const { selectedMonth, setSelectedMonth } = useContext(UserContext);
@@ -105,23 +105,23 @@ const MonthlyAnalyticsPage = () => {
             {/* Summary Cards */}
             <div className="flex md:grid md:grid-cols-2 xl:grid-cols-3 gap-6 overflow-x-auto md:overflow-x-visible pb-4 md:pb-0 no-scrollbar snap-x snap-mandatory">
               <InfoCard
-                icon={<MdAccountBalanceWallet />}
+                icon={<LuCircleArrowDown />}
                 label="Total Income"
                 value={
                   "₹" + addThousandsSeparator(monthlyData?.totalIncome ?? 0)
                 }
-                color="bg-orange-500"
+                color="bg-emerald-500"
               />
               <InfoCard
-                icon={<MdTrendingDown />}
+                icon={<LuCircleArrowUp />}
                 label="Total Expense"
                 value={
                   "₹" + addThousandsSeparator(monthlyData?.totalExpense ?? 0)
                 }
-                color="bg-red-500"
+                color="bg-rose-500"
               />
               <InfoCard
-                icon={<MdTrendingUp />}
+                icon={<LuWallet />}
                 label="Total Savings"
                 value={
                   "₹" + addThousandsSeparator(monthlyData?.totalSavings ?? 0)

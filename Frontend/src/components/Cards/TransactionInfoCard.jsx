@@ -5,6 +5,7 @@ import { emojiFor, capitalize, addThousandsSeparator } from "../../utils/helper"
 const TransactionInfoCard = ({
   title,
   category,
+  source,
   date,
   amount,
   type,
@@ -12,7 +13,8 @@ const TransactionInfoCard = ({
   onDelete,
 }) => {
   const isIncome = type === "income";
-  const emoji = emojiFor(`${category || ""} ${title || ""}`, type);
+  const cat = category || source || "";
+  const emoji = emojiFor(`${cat} ${title || ""}`, type);
 
   return (
     <div className="group relative flex items-center gap-3.5 p-2 rounded-xl transition-all duration-200 cursor-default hover:bg-gray-50/70 dark:hover:bg-gray-800/40">
@@ -31,7 +33,7 @@ const TransactionInfoCard = ({
           {title}
         </p>
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
-          {category ? `${capitalize(category)} · ` : ""}{date}
+          {cat ? `${capitalize(cat)} · ` : ""}{date}
         </p>
       </div>
 

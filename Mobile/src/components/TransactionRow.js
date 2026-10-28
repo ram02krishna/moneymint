@@ -6,6 +6,7 @@ import { capitalize, emojiFor, inr, shortDate } from "../utils/format";
 export default function TransactionRow({ item, onPress }) {
   const { colors } = useTheme();
   const income = item.type === "income";
+  const cat = item.category || item.source || "General";
   return (
     <Pressable
       onPress={onPress}
@@ -27,14 +28,14 @@ export default function TransactionRow({ item, onPress }) {
           justifyContent: "center",
         }}
       >
-        <Text style={{ fontSize: 21 }}>{emojiFor(`${item.category} ${item.title}`, item.type)}</Text>
+        <Text style={{ fontSize: 21 }}>{emojiFor(`${cat} ${item.title || ""}`, item.type)}</Text>
       </View>
       <View style={{ flex: 1 }}>
         <Text style={{ color: colors.text, fontWeight: "700", fontSize: 15 }} numberOfLines={1}>
           {item.title}
         </Text>
         <Text style={{ color: colors.sub, fontSize: 12, marginTop: 2 }} numberOfLines={1}>
-          {capitalize(item.category)} · {shortDate(item.date)}
+          {capitalize(cat)} · {shortDate(item.date)}
         </Text>
       </View>
       <Text style={{ color: income ? colors.success : colors.danger, fontWeight: "800", fontSize: 15 }}>

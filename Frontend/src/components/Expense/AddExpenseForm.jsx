@@ -2,6 +2,20 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { LuIndianRupee, LuTag, LuFileText } from "react-icons/lu";
 import ModernDatePicker from "../Inputs/ModernDatePicker";
+import { emojiFor } from "../../utils/helper";
+
+const EXPENSE_CATS = [
+  "Food",
+  "Transport",
+  "Shopping",
+  "Rent",
+  "Bills",
+  "Entertainment",
+  "Health",
+  "Education",
+  "Travel",
+  "Other",
+];
 
 const getTodayDateString = () => {
   const d = new Date();
@@ -185,6 +199,29 @@ const AddExpenseForm = ({ onAddExpense, closeModal, editingData = null }) => {
                     focus:ring-red-300 dark:focus:ring-red-800
                   "
                 />
+              </div>
+
+              {/* Quick Category Chips matching Android app */}
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {EXPENSE_CATS.map((c) => {
+                  const isSelected =
+                    expense.category.trim().toLowerCase() === c.toLowerCase();
+                  return (
+                    <button
+                      type="button"
+                      key={c}
+                      onClick={() => handleChange("category", c)}
+                      className={`px-2.5 py-1 text-xs rounded-lg transition-all flex items-center gap-1.5 border cursor-pointer ${
+                        isSelected
+                          ? "bg-rose-50 dark:bg-rose-950/40 border-rose-500 text-rose-600 dark:text-rose-400 font-semibold shadow-xs"
+                          : "bg-gray-50 dark:bg-gray-800/60 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-400"
+                      }`}
+                    >
+                      <span>{emojiFor(c, "expense")}</span>
+                      <span>{c}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>

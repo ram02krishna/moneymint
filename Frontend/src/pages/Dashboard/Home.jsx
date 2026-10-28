@@ -6,11 +6,6 @@ import { API_PATHS } from "../../utils/apiPath";
 import { UserContext } from "../../context/UserContextDefinition";
 import { getCachedData, setCachedData } from "../../utils/apiCache";
 import InfoCard from "../../components/Cards/InfoCard";
-import {
-  MdAccountBalanceWallet,
-  MdTrendingUp,
-  MdTrendingDown,
-} from "react-icons/md";
 import { addThousandsSeparator } from "../../utils/helper";
 import { useNavigate } from "react-router-dom";
 import RecentTransactions from "../../components/Dashboard/RecentTransactions";
@@ -20,7 +15,14 @@ import MonthSelector from "../../components/Dashboard/MonthSelector";
 import InsightsCard from "../../components/Dashboard/InsightsCard";
 import BudgetSnapshot from "../../components/Dashboard/BudgetSnapshot";
 import GoalsSnapshot from "../../components/Dashboard/GoalsSnapshot";
-import { LuPlus, LuPiggyBank } from "react-icons/lu";
+import {
+  LuCirclePlus,
+  LuCircleMinus,
+  LuChartPie,
+  LuCircleArrowDown,
+  LuCircleArrowUp,
+  LuWallet,
+} from "react-icons/lu";
 
 // Home page
 let Home = () => {
@@ -130,16 +132,16 @@ let Home = () => {
                 className="hero-btn hero-btn-solid"
                 onClick={() => navigate("/expense", { state: { openAdd: true } })}
               >
-                <LuPlus /> Add expense
+                <LuCircleMinus /> Add expense
               </button>
               <button
                 className="hero-btn"
                 onClick={() => navigate("/income", { state: { openAdd: true } })}
               >
-                <LuPlus /> Add income
+                <LuCirclePlus /> Add income
               </button>
               <button className="hero-btn" onClick={() => navigate("/budgets")}>
-                <LuPiggyBank /> Budgets
+                <LuChartPie /> Budgets
               </button>
             </div>
           </div>
@@ -156,7 +158,7 @@ let Home = () => {
         {/* Top section with summary info cards */}
         <div className="stagger-children grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <InfoCard
-            icon={<MdAccountBalanceWallet />}
+            icon={<LuCircleArrowDown />}
             label="Total Income"
             value={
               "₹" +
@@ -167,7 +169,7 @@ let Home = () => {
             color="bg-emerald-500"
           />
           <InfoCard
-            icon={<MdTrendingDown />}
+            icon={<LuCircleArrowUp />}
             label="Total Expense"
             value={
               "₹" +
@@ -178,7 +180,7 @@ let Home = () => {
             color="bg-rose-500"
           />
           <InfoCard
-            icon={<MdTrendingUp />}
+            icon={<LuWallet />}
             label="Total Savings / Balance"
             value={
               monthlyData

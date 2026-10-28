@@ -82,3 +82,4 @@ const IncomeOverviewCard = ({ transactions = [], totalIncome = 0 }) => {
 };
 
 export default memo(IncomeOverviewCard);
+
