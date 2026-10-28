@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from "react-native";
+import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../theme";
 import { Button, Input } from "../components/ui";
@@ -20,9 +20,11 @@ const AuthLayout = ({ title, subtitle, children, footer }) => {
         contentContainerStyle={{ flexGrow: 1, padding: 24, paddingTop: insets.top + 36, paddingBottom: insets.bottom + 24 }}
       >
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 32 }}>
-          <View style={{ width: 42, height: 42, borderRadius: 14, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" }}>
-            <Text style={{ color: "#fff", fontSize: 22, fontWeight: "900" }}>M</Text>
-          </View>
+          <Image
+            source={require("../../assets/favicon.png")}
+            style={{ width: 42, height: 42 }}
+            accessibilityLabel="MoneyMint logo"
+          />
           <Text style={{ fontSize: 24, fontWeight: "900", color: colors.text }}>
             <Text style={{ color: colors.primary }}>Money</Text>Mint
           </Text>
