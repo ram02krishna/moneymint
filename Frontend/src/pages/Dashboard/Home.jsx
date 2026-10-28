@@ -15,10 +15,7 @@ import { addThousandsSeparator } from "../../utils/helper";
 import { useNavigate } from "react-router-dom";
 import RecentTransactions from "../../components/Dashboard/RecentTransactions";
 import FinanceOverview from "../../components/Dashboard/FinanceOverview";
-import ExpenseTransactions from "../../components/Dashboard/ExpenseTransactions";
 import Last30DaysExpenses from "./Last30DaysExpenses.jsx";
-import RecentIncomeWithChart from "../../components/Dashboard/RecentIncomeWithChart";
-import RecentIncome from "../../components/Dashboard/RecentIncome";
 import MonthSelector from "../../components/Dashboard/MonthSelector";
 import InsightsCard from "../../components/Dashboard/InsightsCard";
 import BudgetSnapshot from "../../components/Dashboard/BudgetSnapshot";
@@ -157,7 +154,7 @@ let Home = () => {
         </div>
 
         {/* Top section with summary info cards */}
-        <div className="stagger-children flex md:grid md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8 overflow-x-auto md:overflow-x-visible pb-4 md:pb-0 no-scrollbar snap-x snap-mandatory">
+        <div className="stagger-children grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <InfoCard
             icon={<MdAccountBalanceWallet />}
             label="Total Income"
@@ -167,7 +164,7 @@ let Home = () => {
                 monthlyData?.totalIncome ?? dashboardData?.totalIncome ?? 0,
               )
             }
-            color="bg-orange-500"
+            color="bg-emerald-500"
           />
           <InfoCard
             icon={<MdTrendingDown />}
@@ -178,7 +175,7 @@ let Home = () => {
                 monthlyData?.totalExpense ?? dashboardData?.totalExpense ?? 0,
               )
             }
-            color="bg-red-500"
+            color="bg-rose-500"
           />
           <InfoCard
             icon={<MdTrendingUp />}
@@ -192,82 +189,33 @@ let Home = () => {
           />
         </div>
 
-        {/* Insights and budgets */}
-        <div className="stagger-children grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Smart Financial Insights */}
+        <div className="mb-8">
           <InsightsCard
             transactions={insightTransactions}
             totalIncome={incomeNow}
             totalExpense={expenseNow}
             month={selectedMonth}
           />
+        </div>
+
+        {/* Financial Planning: Budgets & Savings Goals side-by-side */}
+        <div className="stagger-children grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 items-stretch">
           <BudgetSnapshot />
+          <GoalsSnapshot />
         </div>
 
-        {/* Middle section with lists and overview */}
-        <div className="stagger-children delay-150 grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Left Column: Transactions & Income lists */}
-          <div className="flex flex-col gap-6">
-            <RecentTransactions
-              transactions={
-                monthlyData?.monthlyTransactions?.slice(0, 5) ||
-                dashboardData?.last5Transactions ||
-                []
-              }
-              onSeeMore={() => navigate("/recent-transactions")}
-            />
-            <RecentIncome
-              transactions={
-                monthlyData?.monthlyTransactions?.filter(
-                  (t) => t.type === "income",
-                ) ||
-                dashboardData?.incomeLast30Days ||
-                []
-              }
-              onSeeMore={() => navigate("/income")}
-              className="lg:min-h-[520px]"
-            />
-          </div>
-
-          {/* Right Column: Expenses list & Finance Overview */}
-          <div className="flex flex-col gap-6">
-            <ExpenseTransactions
-              transactions={
-                monthlyData?.monthlyTransactions?.filter(
-                  (t) => t.type === "expense",
-                ) ||
-                dashboardData?.expenseLast30Days ||
-                []
-              }
-              onSeeMore={() => navigate("/expense")}
-            />
-            <FinanceOverview
-              totalBalance={
-                monthlyData?.totalSavings ?? dashboardData?.balance ?? 0
-              }
-              totalIncome={
-                monthlyData?.totalIncome ?? dashboardData?.totalIncome ?? 0
-              }
-              totalExpense={
-                monthlyData?.totalExpense ?? dashboardData?.totalExpense ?? 0
-              }
-            />
-          </div>
-        </div>
-
-        {/* Charts Section */}
-        <div className="stagger-children delay-300 flex flex-col lg:grid lg:grid-cols-2 gap-6 mb-8 w-full">
-          <RecentIncomeWithChart
-            data={
-              monthlyData?.monthlyTransactions
-                ?.filter((t) => t.type === "income")
-                ?.slice(0, 4) ||
-              dashboardData?.incomeLast30Days?.slice(0, 4) ||
-              []
+        {/* Visual Analytics: Financial Overview & Expense Breakdown */}
+        <div className="stagger-children delay-150 grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 items-stretch">
+          <FinanceOverview
+            totalBalance={
+              monthlyData?.totalSavings ?? dashboardData?.balance ?? 0
             }
             totalIncome={
-              monthlyData?.totalIncome ??
-              dashboardData?.totalIncomeLast30Days ??
-              0
+              monthlyData?.totalIncome ?? dashboardData?.totalIncome ?? 0
+            }
+            totalExpense={
+              monthlyData?.totalExpense ?? dashboardData?.totalExpense ?? 0
             }
           />
           <Last30DaysExpenses
@@ -281,9 +229,16 @@ let Home = () => {
           />
         </div>
 
-        {/* Savings goals */}
+        {/* Recent Transactions */}
         <div className="mb-8">
-          <GoalsSnapshot />
+          <RecentTransactions
+            transactions={
+              monthlyData?.monthlyTransactions?.slice(0, 5) ||
+              dashboardData?.last5Transactions ||
+              []
+            }
+            onSeeMore={() => navigate("/recent-transactions")}
+          />
         </div>
       </div>
     </DashboardLayout>

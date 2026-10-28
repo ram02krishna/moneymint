@@ -30,13 +30,16 @@ const GoalsSnapshot = () => {
   const inProgress = (goals || []).filter((g) => g.savedAmount < g.targetAmount).slice(0, 3);
 
   return (
-    <div className="card">
+    <div className="card flex flex-col h-full">
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2.5">
           <span className="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center">
             <LuTarget />
           </span>
-          <h5 className="text-lg font-semibold text-gray-900 dark:text-white">Savings goals</h5>
+          <div>
+            <h5 className="text-lg font-semibold text-gray-900 dark:text-white leading-tight">Savings goals</h5>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Goals in progress</p>
+          </div>
         </div>
         <button className="card-btn" onClick={() => navigate("/goals")}>
           View all <LuArrowRight />
@@ -44,38 +47,39 @@ const GoalsSnapshot = () => {
       </div>
 
       {goals === null ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="space-y-4">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="skeleton h-24" />
+            <div key={i} className="skeleton h-10 w-full" />
           ))}
         </div>
       ) : inProgress.length === 0 ? (
-        <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-6">
-          {goals.length === 0
-            ? "No goals yet — create one to start saving towards something."
-            : "All your goals are complete. Time to set a new one!"}
-        </p>
+        <div className="flex-1 flex flex-col items-center justify-center text-center py-8">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 max-w-[260px]">
+            {goals.length === 0
+              ? "No goals yet — set a target and start saving towards it."
+              : "All your goals are reached! Set a new goal to keep saving."}
+          </p>
+          <button className="add-btn add-btn-fill" onClick={() => navigate("/goals")}>
+            Create a goal
+          </button>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="space-y-5 flex-1">
           {inProgress.map((g) => {
             const pct = (g.savedAmount / g.targetAmount) * 100;
             return (
-              <button
-                key={g._id}
-                onClick={() => navigate("/goals")}
-                className="text-left p-4 rounded-2xl bg-gray-50 dark:bg-gray-700/40 border border-gray-100 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-700 transition-colors cursor-pointer"
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <span className="text-2xl">{g.icon || "🎯"}</span>
-                  <p className="font-semibold text-sm text-gray-900 dark:text-white truncate">
-                    {g.title}
-                  </p>
+              <div key={g._id} className="cursor-pointer group" onClick={() => navigate("/goals")}>
+                <div className="flex items-center justify-between mb-1.5 text-sm">
+                  <span className="font-semibold text-gray-800 dark:text-gray-100 truncate pr-3 flex items-center gap-2">
+                    <span className="text-base">{g.icon || "🎯"}</span>
+                    <span className="truncate group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">{g.title}</span>
+                  </span>
+                  <span className="text-xs font-bold text-purple-600 dark:text-purple-400 shrink-0">
+                    ₹{addThousandsSeparator(g.savedAmount)} / ₹{addThousandsSeparator(g.targetAmount)} · {Math.round(pct)}%
+                  </span>
                 </div>
                 <ProgressBar percent={pct} barClass="bg-purple-500" height="h-2" />
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                  ₹{addThousandsSeparator(g.savedAmount)} of ₹{addThousandsSeparator(g.targetAmount)} · {Math.round(pct)}%
-                </p>
-              </button>
+              </div>
             );
           })}
         </div>

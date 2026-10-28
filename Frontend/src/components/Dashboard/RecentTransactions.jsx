@@ -11,7 +11,7 @@ const RecentTransactions = ({ transactions = [], onSeeMore }) => {
   });
 
   return (
-    <DashboardWidget title="Transactions" onSeeMore={onSeeMore}>
+    <DashboardWidget title="Recent Transactions" onSeeMore={onSeeMore} className="min-h-0">
       <TransactionsTable
         data={sortedTransactions.slice(0, 5)}
         showActions={false}

@@ -135,7 +135,6 @@ export default function DashboardScreen({ navigation }) {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   const firstName = user?.fullName?.split(" ")[0] || "there";
-  const maxCat = Math.max(1, ...(summary?.expenseByCategory || []).map((c) => c.totalAmount));
 
   return (
     <Screen refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} bottomPad={32}>
@@ -194,46 +193,6 @@ export default function DashboardScreen({ navigation }) {
             </>
           )}
 
-          {(summary?.expenseByCategory || []).length > 0 && (
-            <>
-              <SectionTitle title="Spending by category" />
-              <Card style={{ gap: 14 }}>
-                {summary.expenseByCategory.slice(0, 5).map((c) => (
-                  <View key={c._id}>
-                    <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
-                      <Text style={{ color: colors.text, fontWeight: "600" }}>{capitalize(c._id)}</Text>
-                      <Text style={{ color: colors.sub, fontWeight: "600" }}>{inr(c.totalAmount)}</Text>
-                    </View>
-                    <ProgressBar percent={(c.totalAmount / maxCat) * 100} color={colors.primary} />
-                  </View>
-                ))}
-              </Card>
-            </>
-          )}
-
-          {overviewData.length > 0 && (
-            <>
-              <SectionTitle title="Financial overview" />
-              <Card>
-                <DonutChart
-                  data={overviewData}
-                  centerLabel="Total balance"
-                  centerValue={inr((overview?.totalIncome || 0) - (overview?.totalExpense || 0))}
-                />
-                <Legend data={overviewData} />
-              </Card>
-            </>
-          )}
-
-          {last30.some((d) => d.value > 0) && (
-            <>
-              <SectionTitle title="Last 30 days expenses" />
-              <Card>
-                <BarChart width={width - 64} labels={last30.map((d) => d.label)} values={last30.map((d) => d.value)} color="#875CF5" height={190} formatValue={(v) => inr(v)} valueLabel="Expense" />
-              </Card>
-            </>
-          )}
-
           <SectionTitle title="Budgets" action="Manage" onAction={() => navigation.navigate("Budgets")} />
           {budgets.length === 0 ? (
             <Card><Text style={{ color: colors.sub }}>No active budgets. Create one in the Budgets tab to track spending limits.</Text></Card>
@@ -271,6 +230,29 @@ export default function DashboardScreen({ navigation }) {
                 );
               })}
             </Card>
+          )}
+
+          {overviewData.length > 0 && (
+            <>
+              <SectionTitle title="Financial overview" />
+              <Card>
+                <DonutChart
+                  data={overviewData}
+                  centerLabel="Total balance"
+                  centerValue={inr((overview?.totalIncome || 0) - (overview?.totalExpense || 0))}
+                />
+                <Legend data={overviewData} />
+              </Card>
+            </>
+          )}
+
+          {last30.some((d) => d.value > 0) && (
+            <>
+              <SectionTitle title="Last 30 days expenses" />
+              <Card>
+                <BarChart width={width - 64} labels={last30.map((d) => d.label)} values={last30.map((d) => d.value)} color="#875CF5" height={190} formatValue={(v) => inr(v)} valueLabel="Expense" />
+              </Card>
+            </>
           )}
 
           <SectionTitle title="Recent transactions" action="See all" onAction={() => navigation.navigate("Transactions")} />
