@@ -489,7 +489,7 @@ export default function Splits() {
                   </button>
                 </div>
 
-                <div className="space-y-2 max-h-[calc(100vh-320px)] overflow-y-auto pr-1 custom-scrollbar">
+                <div className="space-y-2 max-h-[calc(100vh-320px)] overflow-y-auto pr-1 no-scrollbar">
                   {groups.map((group) => {
                     const isActive = activeGroupId === group._id;
                     const bal = group.myBalance || 0;
@@ -680,26 +680,43 @@ export default function Splits() {
                         <div className="space-y-3">
                           {activeDetail.balances.map((item) => {
                             const isMe = item.userId === currentUserId;
+                            const memberObj = activeDetail.group?.members?.find((m) => m.userId === item.userId);
                             return (
                               <div
                                 key={item.userId}
-                                className="flex items-center justify-between gap-3 p-3 rounded-xl bg-gray-50/70 dark:bg-gray-800/70 border border-gray-100 dark:border-gray-700"
+                                className="flex items-center justify-between gap-3 p-3 rounded-xl bg-gray-50/70 dark:bg-gray-800/70 border border-gray-100 dark:border-gray-700 hover:border-purple-200 dark:hover:border-purple-800/40 transition-colors"
                               >
-                                <div className="min-w-0">
-                                  <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-                                    {item.fullName}
-                                    {isMe ? " (you)" : ""}
-                                  </p>
-                                  <p className="text-xs text-gray-400 dark:text-gray-500">
-                                    {item.balance > 0
-                                      ? "Should receive"
-                                      : item.balance < 0
-                                      ? "Owes the group"
-                                      : "Settled up"}
-                                  </p>
+                                <div className="flex items-center gap-3 min-w-0">
+                                  {memberObj?.profileImageUrl ? (
+                                    <img
+                                      src={memberObj.profileImageUrl}
+                                      alt=""
+                                      className="w-9 h-9 rounded-xl object-cover shrink-0"
+                                    />
+                                  ) : (
+                                    <CharAvatar
+                                      fullName={item.fullName}
+                                      width="w-9"
+                                      height="h-9"
+                                      style="text-xs font-bold rounded-xl"
+                                    />
+                                  )}
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                                      {item.fullName}
+                                      {isMe ? " (you)" : ""}
+                                    </p>
+                                    <p className="text-xs text-gray-400 dark:text-gray-500">
+                                      {item.balance > 0
+                                        ? "Should receive"
+                                        : item.balance < 0
+                                        ? "Owes the group"
+                                        : "Settled up"}
+                                    </p>
+                                  </div>
                                 </div>
                                 <span
-                                  className={`text-sm font-extrabold ${
+                                  className={`text-sm font-extrabold shrink-0 ${
                                     item.balance > 0
                                       ? "text-emerald-600 dark:text-emerald-400"
                                       : item.balance < 0
@@ -759,9 +776,10 @@ export default function Splits() {
                                     });
                                     setSettlementOpen(true);
                                   }}
-                                  className="w-full py-1.5 px-3 rounded-lg bg-purple-50 hover:bg-purple-100 dark:bg-purple-900/30 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 text-xs font-bold transition cursor-pointer"
+                                  className="card-btn justify-center !py-2.5 font-bold hover:border-purple-300 dark:hover:border-purple-500/50 hover:text-purple-600 dark:hover:text-purple-300"
                                 >
-                                  Record Settlement
+                                  <LuArrowLeftRight className="text-sm text-purple-600 dark:text-purple-400" />
+                                  <span>Record Settlement</span>
                                 </button>
                               </div>
                             ))}

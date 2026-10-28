@@ -1,10 +1,11 @@
 // imports
-import React, { lazy, Suspense, useContext } from "react";
+import React, { lazy, Suspense, useContext, useEffect } from "react";
 import {
   BrowserRouter as Router,
   Routes,
   Route,
   Navigate,
+  useLocation,
 } from "react-router-dom";
 import { Analytics } from "@vercel/analytics/react";
 
@@ -15,6 +16,17 @@ import { ToastProvider } from "./context/ToastContext.jsx";
 
 import ErrorBoundary from "./components/ErrorBoundary";
 import LoadingSpinner from "./components/LoadingSpinner";
+
+// Scroll to top instantly when navigating between pages
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [pathname]);
+
+  return null;
+};
 
 // lazy loading pages to make it faster
 let Login = lazy(() => import("./pages/Auth/Login"));
@@ -55,6 +67,7 @@ let App = () => {
           <ToastProvider>
           <div>
             <Router>
+              <ScrollToTop />
               <ErrorBoundary>
                 <Suspense
                   fallback={

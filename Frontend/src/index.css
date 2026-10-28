@@ -164,6 +164,7 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     scroll-behavior: smooth;
+    scrollbar-gutter: stable;
   }
 
   body {
@@ -323,12 +324,12 @@
 
   /* ── Page enter animation ────────────────────────────────── */
   .page-enter {
-    animation: fadeUp 0.45s var(--ease-spring) both;
+    animation: fadeIn 0.25s var(--ease-smooth) both;
   }
 
   /* Stagger children — apply to wrapper, children get delay via nth-child */
   .stagger-children>* {
-    animation: fadeUp 0.45s var(--ease-spring) both;
+    animation: fadeIn 0.25s var(--ease-smooth) both;
   }
 
   .stagger-children>*:nth-child(1) {

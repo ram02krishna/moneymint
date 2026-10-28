@@ -22,7 +22,7 @@ let DashboardLayout = ({ children, activeMenu }) => {
           {/* Main content area */}
           <div
             key={activeMenu}
-            className="page-enter flex-1 min-w-0 w-full max-w-full pt-20 px-4 md:px-6 pb-8 bg-gray-50 dark:bg-gray-900 min-h-[calc(100vh-61px)] lg:ml-64 transition-colors duration-300"
+            className="page-enter flex-1 min-w-0 w-full max-w-full pt-20 px-4 md:px-6 pb-8 bg-gray-50 dark:bg-gray-900 min-h-screen box-border lg:ml-64 transition-colors duration-300"
           >
             {children}
           </div>

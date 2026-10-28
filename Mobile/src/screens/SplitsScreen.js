@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Alert, Pressable, Text, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../theme";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
-import { Button, Card, Chip, ChipRow, EmptyState, Header, Input, Loading, Screen, SectionTitle, Sheet } from "../components/ui";
+import { Badge, Button, Card, Chip, ChipRow, EmptyState, Header, Input, Loading, Screen, SectionTitle, Sheet } from "../components/ui";
 import client, { getErrorMessage } from "../api/client";
 import { API_PATHS } from "../api/paths";
 import { inr, shortDate } from "../utils/format";
@@ -135,6 +135,33 @@ export default function SplitsScreen({ navigation }) {
     finally { setSaving(false); }
   };
 
+  const deleteGroup = () => {
+    if (!detail?.group?._id) return;
+    Alert.alert(
+      `Delete "${detail.group.name}"?`,
+      "All shared bills, history, and settlement records for this group will be permanently erased.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            setSaving(true);
+            try {
+              await client.delete(API_PATHS.SPLITS.DELETE_GROUP(detail.group._id));
+              toast.success("Group deleted");
+              await refreshGroups();
+            } catch (e) {
+              toast.error(getErrorMessage(e, "Could not delete group"));
+            } finally {
+              setSaving(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const setValue = (key, value) => setExpenseForm((old) => ({ ...old, [key]: value }));
   const setPersonValue = (id, key, value) => setParticipantValues((old) => ({ ...old, [id]: { ...(old[id] || {}), [key]: value } }));
 
@@ -143,36 +170,230 @@ export default function SplitsScreen({ navigation }) {
       <Header title="Split expenses" subtitle="Shared bills, group balances and settlements" onBack={() => navigation.goBack()} right={<Pressable onPress={() => setCreateOpen(true)} style={{ padding: 10, borderRadius: 12, backgroundColor: colors.primarySoft }}><Ionicons name="add" size={23} color={colors.primary} /></Pressable>} />
       {error ? <Pressable onPress={() => setError("")} style={{ backgroundColor: colors.dangerSoft, padding: 12, borderRadius: 12, marginBottom: 12 }}><Text style={{ color: colors.danger, fontSize: 13 }}>{error}  ·  Tap to dismiss</Text></Pressable> : null}
 
-      <SectionTitle title="Your groups" action="New group" onAction={() => setCreateOpen(true)} />
+      <SectionTitle title="Your groups" action="+ New group" onAction={() => setCreateOpen(true)} />
       {loading ? <Loading text="Loading your groups…" /> : groups.length === 0 ? <EmptyState emoji="👥" title="No groups yet" message="Create a group for trips, home expenses or dinners, and start splitting bills." actionLabel="Create a group" onAction={() => setCreateOpen(true)} /> : (
         <View style={{ gap: 10, marginBottom: 20 }}>
           {groups.map((group) => {
             const selected = group._id === selectedGroupId;
-            return <Card key={group._id} onPress={() => setSelectedGroupId(group._id)} style={{ borderColor: selected ? colors.primary : colors.border, borderWidth: selected ? 2 : 1, padding: 14 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: colors.primarySoft, alignItems: "center", justifyContent: "center" }}><Ionicons name="people-outline" size={22} color={colors.primary} /></View>
-                <View style={{ flex: 1 }}><Text style={{ color: colors.text, fontSize: 16, fontWeight: "800" }}>{group.name}</Text><Text style={{ color: colors.sub, fontSize: 12, marginTop: 3 }}>{group.members.length} members</Text><Text style={{ color: Number(group.myBalance) > 0 ? colors.success : Number(group.myBalance) < 0 ? colors.danger : colors.sub, fontWeight: "700", marginTop: 5, fontSize: 13 }}>{Number(group.myBalance) > 0 ? `${money(group.myBalance)} owed to you` : Number(group.myBalance) < 0 ? `${money(Math.abs(group.myBalance))} you owe` : "All settled"}</Text></View>
-                <Ionicons name={selected ? "chevron-down" : "chevron-forward"} size={18} color={colors.sub} />
-              </View>
-            </Card>;
+            const bal = Number(group.myBalance) || 0;
+            const initials = (group.name || "G")
+              .trim()
+              .split(/\s+/)
+              .slice(0, 2)
+              .map((w) => w[0])
+              .join("")
+              .toUpperCase();
+
+            return (
+              <Card
+                key={group._id}
+                onPress={() => setSelectedGroupId(group._id)}
+                style={{
+                  borderColor: selected ? colors.primary : colors.border,
+                  borderWidth: selected ? 1.5 : 1,
+                  backgroundColor: selected ? (colors.isDark ? "#1f1b2e" : "#f7f4ff") : colors.card,
+                  padding: 13,
+                  borderRadius: 16,
+                }}
+              >
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                  <View
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 14,
+                      backgroundColor: selected ? colors.primary : colors.primarySoft,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Text style={{ color: selected ? "#fff" : colors.primary, fontWeight: "800", fontSize: 15 }}>
+                      {initials}
+                    </Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                      <Text style={{ color: colors.text, fontSize: 16, fontWeight: "800", flex: 1 }} numberOfLines={1}>
+                        {group.name}
+                      </Text>
+                      <Badge
+                        label={bal > 0 ? `+${money(bal)}` : bal < 0 ? `-${money(Math.abs(bal))}` : "Settled"}
+                        tone={bal > 0 ? "green" : bal < 0 ? "red" : "green"}
+                      />
+                    </View>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 }}>
+                      <Ionicons name="people-outline" size={13} color={colors.sub} />
+                      <Text style={{ color: colors.sub, fontSize: 12 }}>
+                        {group.members.length} {group.members.length === 1 ? "member" : "members"}
+                        {group.description ? ` · ${group.description}` : ""}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </Card>
+            );
           })}
         </View>
       )}
 
       {selectedGroupId && (detailLoading || !detail ? <Loading text="Loading group ledger…" /> : <>
-        <Card style={{ marginBottom: 14 }}>
-          <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
-            <View style={{ flex: 1 }}><Text style={{ color: colors.text, fontSize: 20, fontWeight: "800" }}>{detail.group.name}</Text><Text style={{ color: colors.sub, fontSize: 12, marginTop: 3 }}>{detail.group.description || "Shared spending"} · {detail.group.members.length} members</Text></View>
-            <Pressable onPress={() => setFriendOpen(true)} style={{ backgroundColor: colors.primarySoft, padding: 10, borderRadius: 12 }}><Ionicons name="person-add-outline" size={20} color={colors.primary} /></Pressable>
+        <Card style={{ marginBottom: 14, borderRadius: 20 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12, flex: 1 }}>
+              <View style={{ width: 46, height: 46, borderRadius: 15, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" }}>
+                <Ionicons name="people" size={24} color="#fff" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.text, fontSize: 19, fontWeight: "800" }} numberOfLines={1}>
+                  {detail.group.name}
+                </Text>
+                <Text style={{ color: colors.sub, fontSize: 12, marginTop: 2 }} numberOfLines={1}>
+                  {detail.group.description || "Shared spending"}
+                </Text>
+              </View>
+            </View>
+            <Pressable
+              onPress={deleteGroup}
+              hitSlop={10}
+              style={{ padding: 9, borderRadius: 12, backgroundColor: colors.dangerSoft }}
+              accessibilityLabel="Delete group"
+            >
+              <Ionicons name="trash-outline" size={18} color={colors.danger} />
+            </Pressable>
           </View>
-          <View style={{ backgroundColor: colors.track, borderRadius: 14, padding: 14, marginTop: 14 }}><Text style={{ color: colors.sub, fontSize: 12, fontWeight: "700" }}>YOUR NET BALANCE</Text><Text style={{ fontSize: 26, color: currentBalance > 0 ? colors.success : currentBalance < 0 ? colors.danger : colors.text, fontWeight: "900", marginTop: 3 }}>{money(Math.abs(currentBalance))}</Text><Text style={{ color: colors.sub, fontSize: 12, marginTop: 2 }}>{currentBalance > 0 ? "Others owe you" : currentBalance < 0 ? "You owe the group" : "You are settled up"}</Text></View>
-          <View style={{ flexDirection: "row", gap: 9, marginTop: 12 }}><View style={{ flex: 1, borderWidth: 1, borderColor: colors.border, padding: 12, borderRadius: 12 }}><Text style={{ color: colors.sub, fontSize: 11 }}>Bills</Text><Text style={{ color: colors.text, fontWeight: "800", fontSize: 17 }}>{detail.expenses.length}</Text></View><View style={{ flex: 1, borderWidth: 1, borderColor: colors.border, padding: 12, borderRadius: 12 }}><Text style={{ color: colors.sub, fontSize: 11 }}>Settlements</Text><Text style={{ color: colors.text, fontWeight: "800", fontSize: 17 }}>{detail.settlements.length}</Text></View></View>
-          <View style={{ marginTop: 14 }}><Button title="Add shared expense" icon="add-circle-outline" onPress={() => setExpenseOpen(true)} /></View>
+
+          {/* Members row */}
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
+            {detail.group.members.map((member) => (
+              <View
+                key={member.userId}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 5,
+                  paddingVertical: 4,
+                  paddingHorizontal: 9,
+                  borderRadius: 999,
+                  backgroundColor: colors.track,
+                }}
+              >
+                <Ionicons name="person-circle-outline" size={14} color={colors.sub} />
+                <Text style={{ fontSize: 11, fontWeight: "600", color: colors.text }}>
+                  {member.fullName}{member.userId === myId ? " (you)" : ""}
+                </Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Net balance tile */}
+          <View style={{ backgroundColor: colors.track, borderRadius: 14, padding: 14, marginTop: 14 }}>
+            <Text style={{ color: colors.sub, fontSize: 11, fontWeight: "700", letterSpacing: 0.5 }}>
+              YOUR NET BALANCE
+            </Text>
+            <Text style={{ fontSize: 26, color: currentBalance > 0 ? colors.success : currentBalance < 0 ? colors.danger : colors.text, fontWeight: "900", marginTop: 4 }}>
+              {currentBalance > 0 ? "+" : currentBalance < 0 ? "−" : ""}{money(Math.abs(currentBalance))}
+            </Text>
+            <Text style={{ color: colors.sub, fontSize: 12, marginTop: 2 }}>
+              {currentBalance > 0 ? "Owed to you in this group" : currentBalance < 0 ? "You owe in this group" : "All settled up"}
+            </Text>
+          </View>
+
+          {/* Stats row */}
+          <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
+            <View style={{ flex: 1, borderWidth: 1, borderColor: colors.border, padding: 12, borderRadius: 12 }}>
+              <Text style={{ color: colors.sub, fontSize: 11, fontWeight: "600" }}>Bills</Text>
+              <Text style={{ color: colors.text, fontWeight: "800", fontSize: 17, marginTop: 2 }}>
+                {detail.expenses.length}
+              </Text>
+            </View>
+            <View style={{ flex: 1, borderWidth: 1, borderColor: colors.border, padding: 12, borderRadius: 12 }}>
+              <Text style={{ color: colors.sub, fontSize: 11, fontWeight: "600" }}>Settlements</Text>
+              <Text style={{ color: colors.text, fontWeight: "800", fontSize: 17, marginTop: 2 }}>
+                {detail.settlements.length}
+              </Text>
+            </View>
+          </View>
+
+          {/* Action buttons: Add Member + Record Bill */}
+          <View style={{ flexDirection: "row", gap: 10, marginTop: 14 }}>
+            <Button
+              title="Add Member"
+              variant="soft"
+              icon="person-add-outline"
+              onPress={() => setFriendOpen(true)}
+              style={{ flex: 1 }}
+            />
+            <Button
+              title="Record Bill"
+              variant="primary"
+              icon="receipt-outline"
+              onPress={() => setExpenseOpen(true)}
+              style={{ flex: 1 }}
+            />
+          </View>
         </Card>
 
         <SectionTitle title="Balances by person" />
         <Card style={{ marginBottom: 16 }}>
-          {detail.balances.map((balance, index) => <View key={balance.userId} style={{ paddingVertical: 10, borderBottomWidth: index === detail.balances.length - 1 ? 0 : 1, borderBottomColor: colors.border, flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 10 }}><View style={{ flex: 1 }}><Text style={{ color: colors.text, fontWeight: "700", fontSize: 14 }}>{balance.fullName}{balance.userId === myId ? " (you)" : ""}</Text><Text style={{ color: colors.sub, fontSize: 11, marginTop: 2 }}>{balance.balance > 0 ? "Should receive" : balance.balance < 0 ? "Should pay" : "Settled up"}</Text></View><Text style={{ color: balance.balance > 0 ? colors.success : balance.balance < 0 ? colors.danger : colors.sub, fontWeight: "800" }}>{balance.balance > 0 ? "+" : balance.balance < 0 ? "−" : ""}{money(Math.abs(balance.balance))}</Text></View>)}
+          {detail.balances.map((balance, index) => {
+            const isMe = balance.userId === myId;
+            const initials = (balance.fullName || "M")
+              .trim()
+              .split(/\s+/)
+              .slice(0, 2)
+              .map((w) => w[0])
+              .join("")
+              .toUpperCase();
+
+            return (
+              <View
+                key={balance.userId}
+                style={{
+                  paddingVertical: 11,
+                  borderBottomWidth: index === detail.balances.length - 1 ? 0 : 1,
+                  borderBottomColor: colors.border,
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: 12,
+                }}
+              >
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
+                  <View
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 12,
+                      backgroundColor: isMe ? colors.primarySoft : colors.track,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Text style={{ fontSize: 12, fontWeight: "700", color: isMe ? colors.primary : colors.text }}>
+                      {initials}
+                    </Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: colors.text, fontWeight: "700", fontSize: 14 }}>
+                      {balance.fullName}{isMe ? " (you)" : ""}
+                    </Text>
+                    <Text style={{ color: colors.sub, fontSize: 11, marginTop: 2 }}>
+                      {balance.balance > 0 ? "Should receive" : balance.balance < 0 ? "Owes the group" : "Settled up"}
+                    </Text>
+                  </View>
+                </View>
+                <Text
+                  style={{
+                    color: balance.balance > 0 ? colors.success : balance.balance < 0 ? colors.danger : colors.sub,
+                    fontWeight: "800",
+                    fontSize: 14,
+                  }}
+                >
+                  {balance.balance > 0 ? "+" : balance.balance < 0 ? "−" : ""}{money(Math.abs(balance.balance))}
+                </Text>
+              </View>
+            );
+          })}
         </Card>
 
         <SectionTitle title="Settle up" />

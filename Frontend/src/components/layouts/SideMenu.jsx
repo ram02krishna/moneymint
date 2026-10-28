@@ -60,7 +60,7 @@ let SideMenu = ({ activeMenu, onClose }) => {
       </div>
 
       {/* Menu items */}
-      <div className="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar">
+      <div className="flex-1 px-4 space-y-1 overflow-y-auto no-scrollbar">
         {SIDE_MENU_DATA.map((item, index) => (
           <button
             key={`menu_${index}`}
