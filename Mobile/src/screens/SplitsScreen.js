@@ -15,7 +15,7 @@ const splitModes = [{ label: "Equal", value: "equal" }, { label: "Exact", value:
 const makeValues = (members = []) => Object.fromEntries(members.map((member) => [member.userId, { amount: "", percentage: String(100 / Math.max(members.length, 1)), shares: "1" }]));
 
 export default function SplitsScreen({ navigation }) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const { user } = useAuth();
   const toast = useToast();
   const myId = String(user?._id || user?.id || "");
@@ -190,8 +190,10 @@ export default function SplitsScreen({ navigation }) {
                 onPress={() => setSelectedGroupId(group._id)}
                 style={{
                   borderColor: selected ? colors.primary : colors.border,
-                  borderWidth: selected ? 1.5 : 1,
-                  backgroundColor: selected ? (colors.isDark ? "#1f1b2e" : "#f7f4ff") : colors.card,
+                  borderWidth: selected ? 2 : 1,
+                  backgroundColor: selected
+                    ? (isDark ? "rgba(139, 92, 246, 0.18)" : colors.primarySoft)
+                    : colors.card,
                   padding: 13,
                   borderRadius: 16,
                 }}
@@ -202,12 +204,20 @@ export default function SplitsScreen({ navigation }) {
                       width: 44,
                       height: 44,
                       borderRadius: 14,
-                      backgroundColor: selected ? colors.primary : colors.primarySoft,
+                      backgroundColor: selected
+                        ? colors.primary
+                        : (isDark ? "rgba(139, 92, 246, 0.25)" : colors.primarySoft),
                       alignItems: "center",
                       justifyContent: "center",
                     }}
                   >
-                    <Text style={{ color: selected ? "#fff" : colors.primary, fontWeight: "800", fontSize: 15 }}>
+                    <Text
+                      style={{
+                        color: selected ? "#ffffff" : (isDark ? "#c4b5fd" : colors.primary),
+                        fontWeight: "800",
+                        fontSize: 15,
+                      }}
+                    >
                       {initials}
                     </Text>
                   </View>
@@ -364,12 +374,20 @@ export default function SplitsScreen({ navigation }) {
                       width: 36,
                       height: 36,
                       borderRadius: 12,
-                      backgroundColor: isMe ? colors.primarySoft : colors.track,
+                      backgroundColor: isMe
+                        ? (isDark ? "rgba(139, 92, 246, 0.28)" : colors.primarySoft)
+                        : colors.track,
                       alignItems: "center",
                       justifyContent: "center",
                     }}
                   >
-                    <Text style={{ fontSize: 12, fontWeight: "700", color: isMe ? colors.primary : colors.text }}>
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: "700",
+                        color: isMe ? (isDark ? "#c4b5fd" : colors.primary) : colors.text,
+                      }}
+                    >
                       {initials}
                     </Text>
                   </View>
