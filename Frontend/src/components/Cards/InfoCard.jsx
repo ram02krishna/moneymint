@@ -4,8 +4,10 @@ let InfoCard = ({ icon, label, value, color, hint }) => {
   let bgIcon = {
     "bg-purple-500": "from-purple-500 to-purple-700 shadow-purple-500/30",
     "bg-orange-500": "from-orange-400 to-orange-600 shadow-orange-500/30",
-    "bg-red-500": "from-red-400 to-red-600 shadow-red-500/30",
+    "bg-red-500": "from-rose-500 to-red-600 shadow-rose-500/30",
+    "bg-rose-500": "from-rose-500 to-red-600 shadow-rose-500/30",
     "bg-green-500": "from-emerald-400 to-emerald-600 shadow-emerald-500/30",
+    "bg-emerald-500": "from-emerald-400 to-emerald-600 shadow-emerald-500/30",
     "bg-blue-500": "from-blue-400 to-blue-600 shadow-blue-500/30",
   };
 

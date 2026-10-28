@@ -18,20 +18,18 @@ export let getInitials = (name) => {
   return initials.toUpperCase();
 };
 
-// add commas to numbers
+// add commas to numbers with proper Indian currency formatting
 export let addThousandsSeparator = (num) => {
-  if (num == null || isNaN(num)) return "";
-
-  let parts = num.toString().split(".");
-  let integerPart = parts[0];
-  let fractionalPart = parts[1];
-
-  let formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-
-  if (fractionalPart !== undefined) {
-    return `${formattedInteger}.${fractionalPart}`;
+  if (num == null || isNaN(num) || num === "") return "0";
+  const n = Number(num);
+  if (isNaN(n)) return String(num);
+  if (Number.isInteger(n)) {
+    return n.toLocaleString("en-IN");
   }
-  return formattedInteger;
+  return n.toLocaleString("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 };
 
 export let prepareExpenseLineChartData = (data = []) => {
