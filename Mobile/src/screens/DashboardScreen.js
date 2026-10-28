@@ -1,15 +1,15 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { Pressable, Text, View, useWindowDimensions } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../theme";
 import { useAuth } from "../context/AuthContext";
 import { Badge, Card, EmptyState, Loading, MonthSwitcher, ProgressBar, Screen, SectionTitle, StatTile } from "../components/ui";
 import TransactionRow from "../components/TransactionRow";
-import { BarChart, DonutChart, Legend } from "../components/charts";
+import { DonutChart, Legend } from "../components/charts";
 import client from "../api/client";
 import { API_PATHS } from "../api/paths";
-import { capitalize, inr, monthKey, monthLabel, pad, progressTone, toDateString } from "../utils/format";
+import { capitalize, inr, monthKey, monthLabel, progressTone } from "../utils/format";
 
 export default function DashboardScreen({ navigation }) {
   const { colors } = useTheme();
@@ -18,21 +18,17 @@ export default function DashboardScreen({ navigation }) {
   const [summary, setSummary] = useState(null);
   const [budgets, setBudgets] = useState([]);
   const [goals, setGoals] = useState([]);
-  const [overview, setOverview] = useState(null);
-  const { width } = useWindowDimensions();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [failed, setFailed] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const [s, b, g, o] = await Promise.allSettled([
+      const [s, b, g] = await Promise.allSettled([
         client.get(`${API_PATHS.DASHBOARD.GET_MONTHLY_SUMMARY}?month=${monthKey(month)}`),
         client.get(API_PATHS.BUDGET.REPORT),
         client.get(API_PATHS.GOALS.ROOT),
-        client.get(API_PATHS.DASHBOARD.GET_DATA),
       ]);
-      if (o.status === "fulfilled") setOverview(o.value.data.data);
       if (s.status === "fulfilled") {
         setSummary(s.value.data.data);
         setFailed(false);
@@ -105,32 +101,59 @@ export default function DashboardScreen({ navigation }) {
     return out;
   }, [summary, income, expense, month, colors]);
 
-  const overviewData = useMemo(() => {
-    if (!overview) return [];
-    const inc = overview.totalIncome || 0;
-    const exp = overview.totalExpense || 0;
-    return [
-      { name: "Total balance", value: Math.max(0, inc - exp), color: "#875CF5" },
-      { name: "Total expenses", value: exp, color: "#FA2C37" },
-      { name: "Total income", value: inc, color: "#FF6900" },
-    ].filter((d) => d.value > 0);
-  }, [overview]);
-
-  const last30 = useMemo(() => {
-    const byDay = {};
-    (overview?.expenseLast30Days || []).forEach((t) => {
-      const k = toDateString(t.date);
-      byDay[k] = (byDay[k] || 0) + (t.amount || 0);
-    });
-    const days = [];
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const k = toDateString(d);
-      days.push({ label: `${d.getDate()}/${pad(d.getMonth() + 1)}`, value: byDay[k] || 0 });
+  const incomeData = useMemo(() => {
+    const map = {};
+    if (summary?.incomeBySource?.length) {
+      summary.incomeBySource.forEach((i) => {
+        const k = capitalize(i._id || "Other");
+        map[k] = (map[k] || 0) + (i.totalAmount || 0);
+      });
+    } else {
+      (tx || [])
+        .filter((t) => t.type === "income")
+        .forEach((t) => {
+          const k = capitalize(t.source || t.category || "Other");
+          map[k] = (map[k] || 0) + (t.amount || 0);
+        });
     }
-    return days;
-  }, [overview]);
+    const list = Object.entries(map)
+      .map(([name, value]) => ({ name, value }))
+      .filter((d) => d.value > 0)
+      .sort((a, b) => b.value - a.value);
+
+    if (list.length <= 5) return list;
+    const top = list.slice(0, 5);
+    const otherVal = list.slice(5).reduce((s, x) => s + x.value, 0);
+    if (otherVal > 0) top.push({ name: "Other", value: otherVal });
+    return top;
+  }, [summary, tx]);
+
+  const expenseData = useMemo(() => {
+    const map = {};
+    if (summary?.expenseByCategory?.length) {
+      summary.expenseByCategory.forEach((i) => {
+        const k = capitalize(i._id || "Other");
+        map[k] = (map[k] || 0) + (i.totalAmount || 0);
+      });
+    } else {
+      (tx || [])
+        .filter((t) => t.type === "expense")
+        .forEach((t) => {
+          const k = capitalize(t.category || "Other");
+          map[k] = (map[k] || 0) + (t.amount || 0);
+        });
+    }
+    const list = Object.entries(map)
+      .map(([name, value]) => ({ name, value }))
+      .filter((d) => d.value > 0)
+      .sort((a, b) => b.value - a.value);
+
+    if (list.length <= 5) return list;
+    const top = list.slice(0, 5);
+    const otherVal = list.slice(5).reduce((s, x) => s + x.value, 0);
+    if (otherVal > 0) top.push({ name: "Other", value: otherVal });
+    return top;
+  }, [summary, tx]);
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
@@ -232,28 +255,41 @@ export default function DashboardScreen({ navigation }) {
             </Card>
           )}
 
-          {overviewData.length > 0 && (
-            <>
-              <SectionTitle title="Financial overview" />
-              <Card>
+          <SectionTitle title="Income overview" />
+          <Card>
+            {incomeData.length === 0 ? (
+              <Text style={{ color: colors.sub, textAlign: "center", paddingVertical: 14 }}>
+                No income recorded this month
+              </Text>
+            ) : (
+              <>
                 <DonutChart
-                  data={overviewData}
-                  centerLabel="Total balance"
-                  centerValue={inr((overview?.totalIncome || 0) - (overview?.totalExpense || 0))}
+                  data={incomeData}
+                  centerLabel="Total income"
+                  centerValue={inr(income)}
                 />
-                <Legend data={overviewData} />
-              </Card>
-            </>
-          )}
+                <Legend data={incomeData} />
+              </>
+            )}
+          </Card>
 
-          {last30.some((d) => d.value > 0) && (
-            <>
-              <SectionTitle title="Last 30 days expenses" />
-              <Card>
-                <BarChart width={width - 64} labels={last30.map((d) => d.label)} values={last30.map((d) => d.value)} color="#875CF5" height={190} formatValue={(v) => inr(v)} valueLabel="Expense" />
-              </Card>
-            </>
-          )}
+          <SectionTitle title="Expense overview" />
+          <Card>
+            {expenseData.length === 0 ? (
+              <Text style={{ color: colors.sub, textAlign: "center", paddingVertical: 14 }}>
+                No expenses recorded this month
+              </Text>
+            ) : (
+              <>
+                <DonutChart
+                  data={expenseData}
+                  centerLabel="Total expense"
+                  centerValue={inr(expense)}
+                />
+                <Legend data={expenseData} />
+              </>
+            )}
+          </Card>
 
           <SectionTitle title="Recent transactions" action="See all" onAction={() => navigation.navigate("Transactions")} />
           {tx.length === 0 ? (

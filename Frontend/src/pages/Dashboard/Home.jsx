@@ -14,8 +14,8 @@ import {
 import { addThousandsSeparator } from "../../utils/helper";
 import { useNavigate } from "react-router-dom";
 import RecentTransactions from "../../components/Dashboard/RecentTransactions";
-import FinanceOverview from "../../components/Dashboard/FinanceOverview";
-import Last30DaysExpenses from "./Last30DaysExpenses.jsx";
+import IncomeOverviewCard from "../../components/Dashboard/IncomeOverviewCard";
+import ExpenseOverviewCard from "../../components/Dashboard/ExpenseOverviewCard";
 import MonthSelector from "../../components/Dashboard/MonthSelector";
 import InsightsCard from "../../components/Dashboard/InsightsCard";
 import BudgetSnapshot from "../../components/Dashboard/BudgetSnapshot";
@@ -205,27 +205,27 @@ let Home = () => {
           <GoalsSnapshot />
         </div>
 
-        {/* Visual Analytics: Financial Overview & Expense Breakdown */}
+        {/* Visual Analytics: Income Overview & Expense Overview side-by-side */}
         <div className="stagger-children delay-150 grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 items-stretch">
-          <FinanceOverview
-            totalBalance={
-              monthlyData?.totalSavings ?? dashboardData?.balance ?? 0
+          <IncomeOverviewCard
+            transactions={
+              monthlyData?.monthlyTransactions?.filter(
+                (t) => t.type === "income",
+              ) ||
+              dashboardData?.incomeLast30Days ||
+              []
             }
-            totalIncome={
-              monthlyData?.totalIncome ?? dashboardData?.totalIncome ?? 0
-            }
-            totalExpense={
-              monthlyData?.totalExpense ?? dashboardData?.totalExpense ?? 0
-            }
+            totalIncome={incomeNow}
           />
-          <Last30DaysExpenses
-            data={
+          <ExpenseOverviewCard
+            transactions={
               monthlyData?.monthlyTransactions?.filter(
                 (t) => t.type === "expense",
               ) ||
               dashboardData?.expenseLast30Days ||
               []
             }
+            totalExpense={expenseNow}
           />
         </div>
 
