@@ -1,12 +1,12 @@
-import React, { useCallback, useMemo, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Pressable, Text, View, useWindowDimensions } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../theme";
 import { useAuth } from "../context/AuthContext";
 import { Badge, Card, EmptyState, Loading, MonthSwitcher, ProgressBar, Screen, SectionTitle, StatTile } from "../components/ui";
 import TransactionRow from "../components/TransactionRow";
-import { DonutChart, Legend } from "../components/charts";
+import { DonutChart, Legend, LineChart } from "../components/charts";
 import client from "../api/client";
 import { API_PATHS } from "../api/paths";
 import { capitalize, inr, monthKey, monthLabel, progressTone } from "../utils/format";
@@ -14,13 +14,32 @@ import { capitalize, inr, monthKey, monthLabel, progressTone } from "../utils/fo
 export default function DashboardScreen({ navigation }) {
   const { colors } = useTheme();
   const { user } = useAuth();
+  const { width } = useWindowDimensions();
+  const chartW = width - 64;
   const [month, setMonth] = useState(new Date());
+  const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
   const [summary, setSummary] = useState(null);
+  const [annualOverview, setAnnualOverview] = useState(null);
   const [budgets, setBudgets] = useState([]);
   const [goals, setGoals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [failed, setFailed] = useState(false);
+
+  const loadAnnual = useCallback(async (yr) => {
+    try {
+      const res = await client.get(`${API_PATHS.DASHBOARD.GET_TREND_SUMMARY}?year=${yr}&calendarYear=true`);
+      if (res.data?.data) {
+        setAnnualOverview(res.data.data);
+      }
+    } catch (err) {
+      console.error("Error loading annual financial overview:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadAnnual(selectedYear);
+  }, [selectedYear, loadAnnual]);
 
   const load = useCallback(async () => {
     try {
@@ -29,6 +48,7 @@ export default function DashboardScreen({ navigation }) {
         client.get(API_PATHS.BUDGET.REPORT),
         client.get(API_PATHS.GOALS.ROOT),
       ]);
+      loadAnnual(selectedYear);
       if (s.status === "fulfilled") {
         setSummary(s.value.data.data);
         setFailed(false);
@@ -155,14 +175,7 @@ export default function DashboardScreen({ navigation }) {
     return top;
   }, [summary, tx]);
 
-  const financeOverviewData = useMemo(() => {
-    if (!summary && !income && !expense) return [];
-    return [
-      { name: "Total Balance", value: Math.max(0, savings), color: "#8b5cf6" },
-      { name: "Total Expenses", value: expense, color: "#ef4444" },
-      { name: "Total Income", value: income, color: "#10b981" },
-    ].filter((d) => d.value > 0);
-  }, [summary, savings, expense, income]);
+  const annualMonths = useMemo(() => annualOverview?.months || [], [annualOverview]);
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
@@ -268,19 +281,64 @@ export default function DashboardScreen({ navigation }) {
             </Card>
           )}
 
-          {financeOverviewData.length > 0 && (
-            <>
-              <SectionTitle title="Financial overview" />
-              <Card>
-                <DonutChart
-                  data={financeOverviewData}
-                  centerLabel="Total balance"
-                  centerValue={inr(savings)}
-                />
-                <Legend data={financeOverviewData} />
-              </Card>
-            </>
-          )}
+          {/* Annual Financial overview: Jan to Dec */}
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 22, marginBottom: 10 }}>
+            <View>
+              <Text style={{ fontSize: 18, fontWeight: "800", color: colors.text }}>Financial overview</Text>
+              <Text style={{ fontSize: 12, color: colors.sub, marginTop: 2 }}>Jan – Dec {selectedYear} trajectory</Text>
+            </View>
+            <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 4, paddingVertical: 2 }}>
+              <Pressable onPress={() => setSelectedYear((y) => y - 1)} hitSlop={10} style={{ padding: 4 }}>
+                <Ionicons name="chevron-back" size={16} color={colors.text} />
+              </Pressable>
+              <Text style={{ fontSize: 13, fontWeight: "700", color: colors.text, marginHorizontal: 6 }}>{selectedYear}</Text>
+              <Pressable onPress={() => setSelectedYear((y) => y + 1)} hitSlop={10} style={{ padding: 4 }}>
+                <Ionicons name="chevron-forward" size={16} color={colors.text} />
+              </Pressable>
+            </View>
+          </View>
+
+          <Card style={{ padding: 14 }}>
+            {/* 3 Annual KPI badges */}
+            <View style={{ flexDirection: "row", gap: 8, marginBottom: 14 }}>
+              <View style={{ flex: 1, backgroundColor: "#10b98118", padding: 10, borderRadius: 12, borderWidth: 1, borderColor: "#10b98133" }}>
+                <Text style={{ color: "#10b981", fontSize: 10, fontWeight: "700", textTransform: "uppercase" }}>Earned</Text>
+                <Text style={{ color: "#10b981", fontSize: 13.5, fontWeight: "800", marginTop: 2 }} numberOfLines={1}>
+                  {inr(annualOverview?.annualIncome || 0)}
+                </Text>
+              </View>
+              <View style={{ flex: 1, backgroundColor: "#ef444418", padding: 10, borderRadius: 12, borderWidth: 1, borderColor: "#ef444433" }}>
+                <Text style={{ color: "#ef4444", fontSize: 10, fontWeight: "700", textTransform: "uppercase" }}>Spent</Text>
+                <Text style={{ color: "#ef4444", fontSize: 13.5, fontWeight: "800", marginTop: 2 }} numberOfLines={1}>
+                  {inr(annualOverview?.annualExpense || 0)}
+                </Text>
+              </View>
+              <View style={{ flex: 1, backgroundColor: "#8b5cf618", padding: 10, borderRadius: 12, borderWidth: 1, borderColor: "#8b5cf633" }}>
+                <Text style={{ color: "#8b5cf6", fontSize: 10, fontWeight: "700", textTransform: "uppercase" }}>Saved</Text>
+                <Text style={{ color: (annualOverview?.annualSavings || 0) >= 0 ? "#8b5cf6" : "#ef4444", fontSize: 13.5, fontWeight: "800", marginTop: 2 }} numberOfLines={1}>
+                  {inr(annualOverview?.annualSavings || 0)}
+                </Text>
+              </View>
+            </View>
+
+            {annualMonths.length > 0 ? (
+              <LineChart
+                width={chartW}
+                height={205}
+                labels={annualMonths.map((m) => m.monthDisplay)}
+                series={[
+                  { name: "Income", color: "#10b981", values: annualMonths.map((m) => m.income) },
+                  { name: "Expense", color: "#ef4444", values: annualMonths.map((m) => m.expense) },
+                  { name: "Net Saved", color: "#8b5cf6", values: annualMonths.map((m) => m.savings) },
+                ]}
+                formatValue={(v) => inr(v)}
+              />
+            ) : (
+              <Text style={{ color: colors.sub, textAlign: "center", paddingVertical: 20 }}>
+                Loading {selectedYear} trajectory...
+              </Text>
+            )}
+          </Card>
 
           <SectionTitle title="Income overview" />
           <Card>

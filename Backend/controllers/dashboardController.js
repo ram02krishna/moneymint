@@ -310,37 +310,82 @@ exports.getMonthlyIncome = asyncHandler(async (req, res, next) => {
   });
 });
 
-// get trend data for the last 12 months
+// get trend data for the last 12 months or full calendar year (Jan to Dec)
 exports.getTrendSummary = asyncHandler(async (req, res, next) => {
   let uId = req.user.id;
-  let { month } = req.query;
+  let { month, year } = req.query;
 
-  if (!month) {
-    return next(new AppError("Need month parameter", 400));
+  let isCalendarYear = !!year || req.query.calendarYear === "true";
+  let targetYear = year
+    ? parseInt(year)
+    : month
+      ? parseInt(month.split("-")[0])
+      : new Date().getFullYear();
+
+  let startDate, endDate;
+  let monthList = [];
+
+  if (isCalendarYear) {
+    startDate = new Date(targetYear, 0, 1, 0, 0, 0, 0);
+    endDate = new Date(targetYear, 11, 31, 23, 59, 59, 999);
+
+    const monthNames = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+    for (let m = 0; m < 12; m++) {
+      let key = `${targetYear}-${String(m + 1).padStart(2, "0")}`;
+      monthList.push({
+        key,
+        monthDisplay: monthNames[m],
+        monthIndex: m,
+      });
+    }
+  } else {
+    if (!month) {
+      let now = new Date();
+      month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    }
+    let [yearStr, monthNum] = month.split("-");
+    if (!yearStr || !monthNum || isNaN(yearStr) || isNaN(monthNum)) {
+      return next(new AppError("Wrong format", 400));
+    }
+
+    let yr = parseInt(yearStr);
+    let mn = parseInt(monthNum);
+    let currentDate = new Date(yr, mn - 1, 1);
+    startDate = new Date(currentDate);
+    startDate.setMonth(startDate.getMonth() - 11);
+    startDate.setDate(1);
+    startDate.setHours(0, 0, 0, 0);
+
+    endDate = new Date(yr, mn, 0, 23, 59, 59, 999);
+
+    for (let i = 11; i >= 0; i--) {
+      let d = new Date(currentDate);
+      d.setMonth(d.getMonth() - i);
+      let y = d.getFullYear();
+      let m = String(d.getMonth() + 1).padStart(2, "0");
+      let key = `${y}-${m}`;
+      monthList.push({
+        key,
+        monthDisplay: d.toLocaleString("default", {
+          month: "short",
+          year: "2-digit",
+        }),
+      });
+    }
   }
-
-  let [year, monthNum] = month.split("-");
-  if (!year || !monthNum || isNaN(year) || isNaN(monthNum)) {
-    return next(new AppError("Wrong format", 400));
-  }
-
-  let currentDate = new Date(parseInt(year), parseInt(monthNum) - 1, 1);
-
-  // getting last 11 months + current
-  let startDate = new Date(currentDate);
-  startDate.setMonth(startDate.getMonth() - 11);
-  startDate.setDate(1);
-  startDate.setHours(0, 0, 0, 0);
-
-  let endDate = new Date(
-    parseInt(year),
-    parseInt(monthNum),
-    0,
-    23,
-    59,
-    59,
-    999,
-  );
 
   let [incomeStats, expenseStats] = await Promise.all([
     Income.aggregate([
@@ -395,35 +440,51 @@ exports.getTrendSummary = asyncHandler(async (req, res, next) => {
     expenseMap[key] = item;
   }
 
-  // put it into an array
   let trendData = [];
-  for (let i = 11; i >= 0; i--) {
-    let d = new Date(currentDate);
-    d.setMonth(d.getMonth() - i);
-    let y = d.getFullYear();
-    let m = String(d.getMonth() + 1).padStart(2, "0");
-    let key = `${y}-${m}`;
+  let annualIncome = 0;
+  let annualExpense = 0;
+  let annualSavings = 0;
 
+  for (let item of monthList) {
+    let key = item.key;
     let inc = incomeMap[key]?.totalIncome || 0;
     let exp = expenseMap[key]?.totalExpense || 0;
     let incCount = incomeMap[key]?.transactionCount || 0;
     let expCount = expenseMap[key]?.transactionCount || 0;
+    let sav = inc - exp;
+
+    annualIncome += inc;
+    annualExpense += exp;
+    annualSavings += sav;
 
     trendData.push({
       month: key,
-      monthDisplay: d.toLocaleString("default", {
-        month: "short",
-        year: "2-digit",
-      }),
+      monthDisplay: item.monthDisplay,
       income: inc,
       expense: exp,
-      savings: inc - exp,
+      savings: sav,
       transactions: incCount + expCount,
     });
   }
 
-  res.status(200).json({
-    status: "success",
-    data: trendData,
-  });
+  if (isCalendarYear) {
+    res.status(200).json({
+      status: "success",
+      data: {
+        year: targetYear,
+        months: trendData,
+        annualIncome,
+        annualExpense,
+        annualSavings,
+      },
+    });
+  } else {
+    res.status(200).json({
+      status: "success",
+      data: trendData,
+      annualIncome,
+      annualExpense,
+      annualSavings,
+    });
+  }
 });

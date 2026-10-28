@@ -208,19 +208,13 @@ let Home = () => {
           <GoalsSnapshot />
         </div>
 
-        {/* Visual Analytics: Financial Overview, Income Overview & Expense Overview */}
-        <div className="stagger-children delay-150 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8 items-stretch">
-          <FinanceOverview
-            totalBalance={
-              monthlyData?.totalSavings ?? dashboardData?.balance ?? 0
-            }
-            totalIncome={
-              monthlyData?.totalIncome ?? dashboardData?.totalIncome ?? 0
-            }
-            totalExpense={
-              monthlyData?.totalExpense ?? dashboardData?.totalExpense ?? 0
-            }
-          />
+        {/* Annual Financial Overview: Jan to Dec trajectory */}
+        <div className="mb-8">
+          <FinanceOverview initialYear={selectedMonth.getFullYear()} />
+        </div>
+
+        {/* Monthly Visual Analytics: Income Overview & Expense Overview side-by-side */}
+        <div className="stagger-children delay-150 grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 items-stretch">
           <IncomeOverviewCard
             transactions={
               monthlyData?.monthlyTransactions?.filter(
