@@ -30,6 +30,7 @@ export default function SplitsScreen({ navigation }) {
   const [friendOpen, setFriendOpen] = useState(false);
   const [expenseOpen, setExpenseOpen] = useState(false);
   const [settlementForm, setSettlementForm] = useState(null);
+  const [deleteConfirmGroup, setDeleteConfirmGroup] = useState(null);
   const [groupForm, setGroupForm] = useState({ name: "", description: "", memberEmails: "" });
   const [friendEmail, setFriendEmail] = useState("");
   const [expenseForm, setExpenseForm] = useState({ title: "", amount: "", category: "General", note: "", paidByUserId: "", splitType: "equal" });
@@ -135,45 +136,29 @@ export default function SplitsScreen({ navigation }) {
     finally { setSaving(false); }
   };
 
-  const deleteGroup = (targetGroup = null) => {
-    const groupToDelete = (targetGroup && targetGroup._id) ? targetGroup : detail?.group;
-    if (!groupToDelete?._id) return;
-    const groupId = groupToDelete._id;
-    const groupName = groupToDelete.name || "this group";
-
-    Alert.alert(
-      `Delete "${groupName}"?`,
-      "All shared bills, history, and settlement records for this group will be permanently erased.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            setSaving(true);
-            try {
-              await client.delete(API_PATHS.SPLITS.DELETE_GROUP(groupId));
-              toast.success("Group deleted");
-              setGroups((prev) => {
-                const updated = prev.filter((g) => g._id !== groupId);
-                if (selectedGroupId === groupId) {
-                  const nextId = updated[0]?._id || "";
-                  setSelectedGroupId(nextId);
-                  if (!nextId) setDetail(null);
-                }
-                return updated;
-              });
-              await refreshGroups();
-            } catch (e) {
-              toast.error(getErrorMessage(e, "Could not delete group"));
-            } finally {
-              setSaving(false);
-            }
-          },
-        },
-      ],
-      { cancelable: true }
-    );
+  const confirmDeleteGroup = async () => {
+    if (!deleteConfirmGroup?._id) return;
+    const groupId = deleteConfirmGroup._id;
+    setSaving(true);
+    try {
+      await client.delete(API_PATHS.SPLITS.DELETE_GROUP(groupId));
+      toast.success("Group deleted");
+      setDeleteConfirmGroup(null);
+      setGroups((prev) => {
+        const updated = prev.filter((g) => g._id !== groupId);
+        if (selectedGroupId === groupId) {
+          const nextId = updated[0]?._id || "";
+          setSelectedGroupId(nextId);
+          if (!nextId) setDetail(null);
+        }
+        return updated;
+      });
+      await refreshGroups();
+    } catch (e) {
+      toast.error(getErrorMessage(e, "Could not delete group"));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const setValue = (key, value) => setExpenseForm((old) => ({ ...old, [key]: value }));
@@ -188,7 +173,6 @@ export default function SplitsScreen({ navigation }) {
           if (navigation.canGoBack()) navigation.goBack();
           else navigation.navigate("MoreMain");
         }}
-        right={<Pressable onPress={() => setCreateOpen(true)} style={{ padding: 10, borderRadius: 12, backgroundColor: colors.primarySoft }}><Ionicons name="add" size={23} color={colors.primary} /></Pressable>}
       />
       {error ? <Pressable onPress={() => setError("")} style={{ backgroundColor: colors.dangerSoft, padding: 12, borderRadius: 12, marginBottom: 12 }}><Text style={{ color: colors.danger, fontSize: 13 }}>{error}  ·  Tap to dismiss</Text></Pressable> : null}
 
@@ -210,8 +194,7 @@ export default function SplitsScreen({ navigation }) {
               <Card
                 key={group._id}
                 onPress={() => setSelectedGroupId(group._id)}
-                onLongPress={() => deleteGroup(group)}
-                style={{
+                                style={{
                   borderColor: selected ? colors.primary : colors.border,
                   borderWidth: selected ? 2 : 1,
                   backgroundColor: selected
@@ -249,20 +232,10 @@ export default function SplitsScreen({ navigation }) {
                       <Text style={{ color: colors.text, fontSize: 16, fontWeight: "800", flex: 1 }} numberOfLines={1}>
                         {group.name}
                       </Text>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                        <Badge
-                          label={bal > 0 ? `+${money(bal)}` : bal < 0 ? `-${money(Math.abs(bal))}` : "Settled"}
-                          tone={bal > 0 ? "green" : bal < 0 ? "red" : "green"}
-                        />
-                        <Pressable
-                          onPress={() => deleteGroup(group)}
-                          hitSlop={8}
-                          style={{ padding: 6, borderRadius: 8, backgroundColor: colors.dangerSoft }}
-                          accessibilityLabel={`Delete ${group.name}`}
-                        >
-                          <Ionicons name="trash-outline" size={14} color={colors.danger} />
-                        </Pressable>
-                      </View>
+                      <Badge
+                        label={bal > 0 ? `+${money(bal)}` : bal < 0 ? `-${money(Math.abs(bal))}` : "Settled"}
+                        tone={bal > 0 ? "green" : bal < 0 ? "red" : "green"}
+                      />
                     </View>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 }}>
                       <Ionicons name="people-outline" size={13} color={colors.sub} />
@@ -296,9 +269,16 @@ export default function SplitsScreen({ navigation }) {
               </View>
             </View>
             <Pressable
-              onPress={() => deleteGroup(detail.group)}
+              onPress={() => setDeleteConfirmGroup(detail.group)}
               hitSlop={10}
-              style={{ padding: 9, borderRadius: 12, backgroundColor: colors.dangerSoft }}
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 12,
+                backgroundColor: colors.dangerSoft,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
               accessibilityLabel="Delete group"
             >
               <Ionicons name="trash-outline" size={18} color={colors.danger} />
@@ -483,6 +463,68 @@ export default function SplitsScreen({ navigation }) {
         <Input label="Note (optional)" value={settlementForm?.note || ""} onChangeText={(v) => setSettlementForm((old) => old ? ({ ...old, note: v }) : old)} placeholder="UPI, cash, partial payment" />
         <Text style={{ color: colors.sub, fontSize: 12, marginBottom: 12 }}>The amount can be a full payment or any partial amount up to the outstanding balance.</Text>
         <Button title="Confirm settlement" onPress={saveSettlement} loading={saving} />
+      </Sheet>
+
+      <Sheet
+        visible={Boolean(deleteConfirmGroup)}
+        onClose={() => !saving && setDeleteConfirmGroup(null)}
+        title="Delete group"
+      >
+        <View style={{ alignItems: "center", paddingVertical: 10 }}>
+          <View
+            style={{
+              width: 58,
+              height: 58,
+              borderRadius: 20,
+              backgroundColor: colors.dangerSoft,
+              alignItems: "center",
+              justifyContent: "center",
+              marginBottom: 16,
+            }}
+          >
+            <Ionicons name="trash-outline" size={28} color={colors.danger} />
+          </View>
+          <Text
+            style={{
+              color: colors.text,
+              fontSize: 18,
+              fontWeight: "800",
+              textAlign: "center",
+              marginBottom: 8,
+            }}
+          >
+            Delete "{deleteConfirmGroup?.name}"?
+          </Text>
+          <Text
+            style={{
+              color: colors.sub,
+              fontSize: 14,
+              textAlign: "center",
+              lineHeight: 20,
+              paddingHorizontal: 12,
+              marginBottom: 24,
+            }}
+          >
+            All shared bills, history, and settlement records for this group will be permanently erased. This action cannot be undone.
+          </Text>
+
+          <View style={{ flexDirection: "row", gap: 12, width: "100%" }}>
+            <Button
+              title="Cancel"
+              variant="ghost"
+              onPress={() => setDeleteConfirmGroup(null)}
+              disabled={saving}
+              style={{ flex: 1 }}
+            />
+            <Button
+              title={saving ? "Deleting…" : "Delete"}
+              variant="danger"
+              onPress={confirmDeleteGroup}
+              loading={saving}
+              style={{ flex: 1 }}
+            />
+          </View>
+        </View>
       </Sheet>
     </Screen>
   );

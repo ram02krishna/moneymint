@@ -474,19 +474,6 @@ export default function Splits() {
                       {groups.length}
                     </span>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setGroupForm({ name: "", description: "", memberEmails: "" });
-                      setCreateOpen(true);
-                    }}
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 py-1 px-2.5 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-colors cursor-pointer"
-                    title="Create new group"
-                  >
-                    <LuPlus className="text-sm" />
-                    <span>New</span>
-                  </button>
                 </div>
 
                 <div className="space-y-2 max-h-[calc(100vh-320px)] overflow-y-auto pr-1 no-scrollbar">
