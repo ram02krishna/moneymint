@@ -1,10 +1,10 @@
 // Base URL of the MoneyMint backend (the SAME Express API the web app uses).
 //
-//  - Android emulator  -> http://10.0.2.2:5000   (emulator's alias for your PC's localhost)
-//  - Physical phone    -> http://<your-PC-LAN-IP>:5000   (phone and PC on the same Wi-Fi)
-//  - Production        -> your deployed HTTPS backend URL (e.g. the Vercel one)
+//  - Production / Standalone -> https://money-mint-backend.vercel.app (default for release builds)
+//  - Local development       -> Override in Mobile/.env (e.g. http://10.0.2.2:5000 or LAN IP)
 //
-// Set it in Mobile/.env:  EXPO_PUBLIC_API_URL=https://your-backend.example.com
+export const DEFAULT_API_URL = "https://money-mint-backend.vercel.app";
+
 export const API_URL = (
-  process.env.EXPO_PUBLIC_API_URL || "http://10.0.2.2:5000"
+  process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL
 ).replace(/\/+$/, "");

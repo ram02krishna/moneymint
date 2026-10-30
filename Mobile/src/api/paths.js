@@ -30,9 +30,11 @@ export const API_PATHS = {
   SPLITS: {
     GROUPS: "/api/v1/splits/groups",
     GROUP: (id) => `/api/v1/splits/groups/${id}`,
+    DELETE_GROUP: (id) => `/api/v1/splits/groups/${id}`,
     ADD_MEMBER: (id) => `/api/v1/splits/groups/${id}/members`,
     ADD_EXPENSE: (id) => `/api/v1/splits/groups/${id}/expenses`,
     SETTLE: (id) => `/api/v1/splits/groups/${id}/settlements`,
+    SEARCH_FRIEND: "/api/v1/splits/friends/search",
   },
   GOALS: {
     ROOT: "/api/v1/goals",

@@ -135,10 +135,14 @@ export default function SplitsScreen({ navigation }) {
     finally { setSaving(false); }
   };
 
-  const deleteGroup = () => {
-    if (!detail?.group?._id) return;
+  const deleteGroup = (targetGroup = null) => {
+    const groupToDelete = (targetGroup && targetGroup._id) ? targetGroup : detail?.group;
+    if (!groupToDelete?._id) return;
+    const groupId = groupToDelete._id;
+    const groupName = groupToDelete.name || "this group";
+
     Alert.alert(
-      `Delete "${detail.group.name}"?`,
+      `Delete "${groupName}"?`,
       "All shared bills, history, and settlement records for this group will be permanently erased.",
       [
         { text: "Cancel", style: "cancel" },
@@ -148,8 +152,17 @@ export default function SplitsScreen({ navigation }) {
           onPress: async () => {
             setSaving(true);
             try {
-              await client.delete(API_PATHS.SPLITS.DELETE_GROUP(detail.group._id));
+              await client.delete(API_PATHS.SPLITS.DELETE_GROUP(groupId));
               toast.success("Group deleted");
+              setGroups((prev) => {
+                const updated = prev.filter((g) => g._id !== groupId);
+                if (selectedGroupId === groupId) {
+                  const nextId = updated[0]?._id || "";
+                  setSelectedGroupId(nextId);
+                  if (!nextId) setDetail(null);
+                }
+                return updated;
+              });
               await refreshGroups();
             } catch (e) {
               toast.error(getErrorMessage(e, "Could not delete group"));
@@ -158,7 +171,8 @@ export default function SplitsScreen({ navigation }) {
             }
           },
         },
-      ]
+      ],
+      { cancelable: true }
     );
   };
 
@@ -196,6 +210,7 @@ export default function SplitsScreen({ navigation }) {
               <Card
                 key={group._id}
                 onPress={() => setSelectedGroupId(group._id)}
+                onLongPress={() => deleteGroup(group)}
                 style={{
                   borderColor: selected ? colors.primary : colors.border,
                   borderWidth: selected ? 2 : 1,
@@ -234,10 +249,20 @@ export default function SplitsScreen({ navigation }) {
                       <Text style={{ color: colors.text, fontSize: 16, fontWeight: "800", flex: 1 }} numberOfLines={1}>
                         {group.name}
                       </Text>
-                      <Badge
-                        label={bal > 0 ? `+${money(bal)}` : bal < 0 ? `-${money(Math.abs(bal))}` : "Settled"}
-                        tone={bal > 0 ? "green" : bal < 0 ? "red" : "green"}
-                      />
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                        <Badge
+                          label={bal > 0 ? `+${money(bal)}` : bal < 0 ? `-${money(Math.abs(bal))}` : "Settled"}
+                          tone={bal > 0 ? "green" : bal < 0 ? "red" : "green"}
+                        />
+                        <Pressable
+                          onPress={() => deleteGroup(group)}
+                          hitSlop={8}
+                          style={{ padding: 6, borderRadius: 8, backgroundColor: colors.dangerSoft }}
+                          accessibilityLabel={`Delete ${group.name}`}
+                        >
+                          <Ionicons name="trash-outline" size={14} color={colors.danger} />
+                        </Pressable>
+                      </View>
                     </View>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 }}>
                       <Ionicons name="people-outline" size={13} color={colors.sub} />
@@ -271,7 +296,7 @@ export default function SplitsScreen({ navigation }) {
               </View>
             </View>
             <Pressable
-              onPress={deleteGroup}
+              onPress={() => deleteGroup(detail.group)}
               hitSlop={10}
               style={{ padding: 9, borderRadius: 12, backgroundColor: colors.dangerSoft }}
               accessibilityLabel="Delete group"

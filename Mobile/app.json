@@ -3,6 +3,7 @@
     "name": "MoneyMint",
     "slug": "moneymint",
     "version": "1.1.0",
+    "scheme": "moneymint",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -13,6 +14,16 @@
     },
     "android": {
       "package": "com.moneymint.app",
+      "versionCode": 1,
+      "allowBackup": false,
+      "usesCleartextTraffic": true,
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#4f46e5",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -28,6 +39,12 @@
           "photosPermission": "Allow MoneyMint to access your photos to set a profile picture."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "4a14018b-f356-4aac-8e95-69303537a61b"
+      }
+    },
+    "owner": "ram02krishna"
   }
 }

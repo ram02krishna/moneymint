@@ -14,34 +14,61 @@ Full parity with the web app:
 - **Split expenses** (More tab): groups, add existing MoneyMint members by email, equal/exact/percentage/share splits, payer/participant selection, per-member balances, and full or partial settlement history
 - **More tab:** Income, Expenses, Goals shortcuts, edit profile, **profile photo upload**, change password, dark mode, log out
 
-## 1. Point the app at your backend
+## 1. Backend Connectivity & Environment
+By default, the app connects to the live production backend:
+`https://money-mint-backend.vercel.app`
+
+This allows the app to work seamlessly as a standalone APK on any Wi-Fi or mobile data network.
+
+For local development against your PC:
 ```bash
 cd Mobile
-cp .env.example .env      # then edit EXPO_PUBLIC_API_URL
+cp .env.example .env      # edit EXPO_PUBLIC_API_URL
 ```
 | Where you run it                | `EXPO_PUBLIC_API_URL`                          |
 |---------------------------------|------------------------------------------------|
+| Standalone APK / Mobile Data    | `https://money-mint-backend.vercel.app` (default) |
 | Android emulator, local backend | `http://10.0.2.2:5000`                         |
-| Real phone, local backend       | `http://<your-PC-LAN-IP>:5000` (same Wi-Fi, allow port 5000 in the firewall) |
-| Deployed backend (recommended)  | `https://your-backend.vercel.app`              |
+| Real phone, local backend       | `http://<your-PC-LAN-IP>:5000` (same Wi-Fi, port 5000 allowed in firewall) |
 
 No backend code changes are needed (it already accepts requests that have no browser `Origin`).
 
-## 2. Run it
+## 2. Run Locally in Development
 ```bash
+cd Mobile
 npm install
 npx expo start
 ```
 Scan the QR code with **Expo Go** on your phone, or press `a` to open an Android emulator.
 
-## 3. Build an installable APK
+## 3. Build an Installable Standalone APK
+The app is configured to connect to the deployed production backend (`https://money-mint-backend.vercel.app`), so it works on any Wi-Fi or mobile data network without Expo Go or a computer running.
+
 ```bash
-npm install -g eas-cli
-eas login
-eas build -p android --profile preview     # produces an .apk you can install
-eas build -p android --profile production  # .aab for Google Play
+# 1. Log in to your Expo account (free at https://expo.dev)
+npx eas-cli login
+
+# 2. Configure project on EAS (only needed once, automatically links projectId)
+npx eas-cli init
+
+# 3. Build the standalone installable .apk
+npx eas-cli build --platform android --profile preview
+
+# Or build production APK directly:
+npx eas-cli build --platform android --profile production-apk
+
+# Or build Google Play Store .aab bundle:
+npx eas-cli build --platform android --profile production
 ```
-Release builds block plain `http://` traffic on Android, so use an **https** backend URL for APK/AAB builds.
+
+### Installing the APK on your Android device:
+1. When the EAS build finishes, it prints a direct download link and a QR code in the terminal.
+2. Open the link on your phone (or scan the QR code) to download the `.apk`.
+3. Open the downloaded `.apk` file and tap **Install** (enable "Install unknown apps" for your browser if prompted).
+4. You can also install it via USB using ADB:
+   ```bash
+   adb install MoneyMint.apk
+   ```
 
 ## Notes
 - JWTs from the backend last 1 hour; when one expires the app returns to the login screen automatically.
