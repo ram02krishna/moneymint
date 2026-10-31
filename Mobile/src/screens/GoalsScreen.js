@@ -1,8 +1,8 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { Alert, Pressable, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "../theme";
-import { Badge, Button, Card, DateField, EmptyState, Fab, Header, IconButton, Input, Loading, ProgressBar, Screen, Segmented, Sheet, StatTile } from "../components/ui";
+import { Badge, Button, Card, ConfirmSheet, DateField, EmptyState, Fab, Header, IconButton, Input, Loading, ProgressBar, Screen, Segmented, Sheet, StatTile } from "../components/ui";
 import { useToast } from "../context/ToastContext";
 import client, { getErrorMessage } from "../api/client";
 import { API_PATHS } from "../api/paths";
@@ -23,6 +23,8 @@ export default function GoalsScreen({ navigation, route }) {
   const [form, setForm] = useState({ title: "", icon: "🎯", targetAmount: "", deadline: "" });
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const [target, setTarget] = useState(null); // goal being topped up
   const [mode, setMode] = useState("deposit");
@@ -80,17 +82,22 @@ export default function GoalsScreen({ navigation, route }) {
     }
   };
 
-  const removeGoal = (g) =>
-    Alert.alert("Delete goal?", `"${g.title}" and its history will be removed.`, [
-      { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: async () => {
-          try {
-            await client.delete(`${API_PATHS.GOALS.ROOT}/${g._id}`);
-            setGoals((p) => p.filter((x) => x._id !== g._id));
-            toast.success("Goal deleted");
-          } catch (error) { toast.error(getErrorMessage(error, "Could not delete")); }
-        } },
-    ]);
+  const removeGoal = (g) => setDeleteTarget(g);
+
+  const confirmDeleteGoal = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await client.delete(`${API_PATHS.GOALS.ROOT}/${deleteTarget._id}`);
+      setGoals((p) => p.filter((x) => x._id !== deleteTarget._id));
+      toast.success("Goal deleted successfully");
+      setDeleteTarget(null);
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Could not delete"));
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const openTopUp = (g) => { setTarget(g); setMode("deposit"); setAmount(""); setNote(""); setAmtError(""); };
 
@@ -200,6 +207,16 @@ export default function GoalsScreen({ navigation, route }) {
           </>
         )}
       </Sheet>
+
+      <ConfirmSheet
+        visible={Boolean(deleteTarget)}
+        onClose={() => !deleting && setDeleteTarget(null)}
+        onConfirm={confirmDeleteGoal}
+        title={`Delete "${deleteTarget?.title}"?`}
+        message="This savings goal, saved amount history, and target tracking will be permanently erased. This action cannot be undone."
+        confirmText="Delete goal"
+        loading={deleting}
+      />
     </View>
   );
 }

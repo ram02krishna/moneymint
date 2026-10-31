@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { Alert, Pressable, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../theme";
-import { Button, Chip, ChipRow, DateField, Input, Screen, Segmented } from "../components/ui";
+import { Button, Chip, ChipRow, ConfirmSheet, DateField, Input, Screen, Segmented } from "../components/ui";
 import { useToast } from "../context/ToastContext";
 import client, { getErrorMessage } from "../api/client";
 import { API_PATHS } from "../api/paths";
@@ -28,6 +28,8 @@ export default function AddTransactionScreen({ navigation, route }) {
   });
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const set = (k, v) => {
     setForm((p) => ({ ...p, [k]: v }));
     if (errors[k]) setErrors((p) => ({ ...p, [k]: "" }));
@@ -65,23 +67,19 @@ export default function AddTransactionScreen({ navigation, route }) {
     }
   };
 
-  const remove = () => {
-    Alert.alert("Delete transaction?", `"${item.title}" will be removed permanently.`, [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await client.delete(`${endpoint}/${item._id}`);
-            toast.success("Transaction deleted");
-            navigation.goBack();
-          } catch (error) {
-            toast.error(getErrorMessage(error, "Could not delete"));
-          }
-        },
-      },
-    ]);
+  const remove = () => setDeleteConfirmOpen(true);
+
+  const confirmDelete = async () => {
+    setDeleting(true);
+    try {
+      await client.delete(`${endpoint}/${item._id}`);
+      toast.success("Transaction deleted successfully");
+      setDeleteConfirmOpen(false);
+      navigation.goBack();
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Could not delete"));
+      setDeleting(false);
+    }
   };
 
   const cats = isIncome ? INCOME_CATS : EXPENSE_CATS;
@@ -124,6 +122,16 @@ export default function AddTransactionScreen({ navigation, route }) {
 
       <Button title={editing ? "Save changes" : isIncome ? "Add income" : "Add expense"} onPress={save} loading={saving} />
       {editing && <Button title="Delete" variant="danger" icon="trash-outline" onPress={remove} style={{ marginTop: 10 }} />}
+
+      <ConfirmSheet
+        visible={deleteConfirmOpen}
+        onClose={() => !deleting && setDeleteConfirmOpen(false)}
+        onConfirm={confirmDelete}
+        title={`Delete "${item?.title}"?`}
+        message="This transaction will be permanently removed from your history and charts. This action cannot be undone."
+        confirmText="Delete transaction"
+        loading={deleting}
+      />
     </Screen>
   );
 }

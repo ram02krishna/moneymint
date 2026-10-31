@@ -1,11 +1,11 @@
 import React, { useState } from "react";
-import { Alert, Pressable, Switch, Text, View } from "react-native";
+import { Pressable, Switch, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useTheme } from "../theme";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
-import { Avatar, Button, Card, Header, Input, Screen, Sheet } from "../components/ui";
+import { Avatar, Button, Card, ConfirmSheet, Header, Input, Screen, Sheet } from "../components/ui";
 import client, { getErrorMessage } from "../api/client";
 import { API_PATHS } from "../api/paths";
 import { API_URL } from "../config";
@@ -43,6 +43,7 @@ export default function MoreScreen({ navigation }) {
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
 
   const updateProfile = (extra = {}) =>
     client.put(API_PATHS.AUTH.UPDATE_USER_INFO, { fullName: user.fullName, email: user.email, ...extra });
@@ -108,11 +109,7 @@ export default function MoreScreen({ navigation }) {
     }
   };
 
-  const confirmLogout = () =>
-    Alert.alert("Log out?", "You'll need to log in again.", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Log out", style: "destructive", onPress: logout },
-    ]);
+  const confirmLogout = () => setLogoutConfirmOpen(true);
 
   const go = (filter) => navigation.navigate("Transactions", { filter, stamp: Date.now() });
 
@@ -167,6 +164,21 @@ export default function MoreScreen({ navigation }) {
         <Input label="New password" value={pass.newPassword} onChangeText={(v) => setPass((p) => ({ ...p, newPassword: v }))} secure error={errors.newPassword} />
         <Button title="Update password" onPress={changePassword} loading={saving} />
       </Sheet>
+
+      <ConfirmSheet
+        visible={logoutConfirmOpen}
+        onClose={() => setLogoutConfirmOpen(false)}
+        onConfirm={() => {
+          setLogoutConfirmOpen(false);
+          logout();
+        }}
+        title="Log out of MoneyMint?"
+        message="You will need to sign in again to access your transactions, budgets, goals, and split expenses."
+        confirmText="Log out"
+        cancelText="Stay logged in"
+        variant="danger"
+        icon="log-out-outline"
+      />
     </Screen>
   );
 }

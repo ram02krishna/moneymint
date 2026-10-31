@@ -1,8 +1,8 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { Alert, Switch, Text, View } from "react-native";
+import { Switch, Text, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "../theme";
-import { Badge, Button, Card, Chip, ChipRow, DateField, EmptyState, Fab, Header, IconButton, Input, Loading, ProgressBar, Screen, Sheet, StatTile } from "../components/ui";
+import { Badge, Button, Card, Chip, ChipRow, ConfirmSheet, DateField, EmptyState, Fab, Header, IconButton, Input, Loading, ProgressBar, Screen, Sheet, StatTile } from "../components/ui";
 import { useToast } from "../context/ToastContext";
 import client, { getErrorMessage } from "../api/client";
 import { API_PATHS } from "../api/paths";
@@ -42,6 +42,8 @@ export default function BudgetsScreen() {
   const [form, setForm] = useState(emptyForm());
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -97,17 +99,22 @@ export default function BudgetsScreen() {
     }
   };
 
-  const remove = (b) =>
-    Alert.alert("Delete budget?", `The ${capitalize(b.category)} budget will be removed.`, [
-      { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: async () => {
-          try {
-            await client.delete(`${API_PATHS.BUDGET.ROOT}/${b._id}`);
-            setReport((p) => p.filter((x) => x._id !== b._id));
-            toast.success("Budget deleted");
-          } catch (error) { toast.error(getErrorMessage(error, "Could not delete")); }
-        } },
-    ]);
+  const remove = (b) => setDeleteTarget(b);
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await client.delete(`${API_PATHS.BUDGET.ROOT}/${deleteTarget._id}`);
+      setReport((p) => p.filter((x) => x._id !== deleteTarget._id));
+      toast.success("Budget deleted successfully");
+      setDeleteTarget(null);
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Could not delete"));
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <View style={{ flex: 1 }}>
@@ -188,6 +195,16 @@ export default function BudgetsScreen() {
         )}
         <Button title={editing ? "Update budget" : "Create budget"} onPress={save} loading={saving} />
       </Sheet>
+
+      <ConfirmSheet
+        visible={Boolean(deleteTarget)}
+        onClose={() => !deleting && setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title={`Delete "${deleteTarget ? capitalize(deleteTarget.category) : ""}" budget?`}
+        message="This budget limit and all its progress records will be permanently removed. This action cannot be undone."
+        confirmText="Delete budget"
+        loading={deleting}
+      />
     </View>
   );
 }

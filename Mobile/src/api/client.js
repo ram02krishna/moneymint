@@ -37,10 +37,16 @@ client.interceptors.response.use(
 // readable message from any axios error
 export const getErrorMessage = (error, fallback = "Something went wrong") => {
   if (error?.code === "ECONNABORTED") return "Request timed out. Please try again.";
-  if (!error?.response) return `Cannot reach the server (${API_URL}). Check your connection / API URL.`;
-  const data = error.response.data;
-  if (data?.errors?.length) return data.errors[0].msg || fallback;
-  return data?.message || fallback;
+  if (error?.response?.data) {
+    const data = error.response.data;
+    if (data?.errors?.length) return data.errors[0].msg || fallback;
+    return data?.message || fallback;
+  }
+  if (!error?.response) {
+    const detail = error?.message ? `: ${error.message}` : "";
+    return `Cannot reach server (${API_URL})${detail}. Check internet connection or API URL.`;
+  }
+  return fallback;
 };
 
 export default client;

@@ -1,12 +1,25 @@
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, NativeModules, Pressable, StyleSheet, Text, TurboModuleRegistry, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
-import { GoogleSignin, statusCodes } from "@react-native-google-signin/google-signin";
 import { useTheme } from "../theme";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { GOOGLE_WEB_CLIENT_ID } from "../config";
 import { getErrorMessage } from "../api/client";
+
+// Safely obtain native GoogleSignin module if registered in the binary (standalone APK / custom dev client).
+// Avoids fatal "RNGoogleSignin could not be found" crash when running inside Expo Go.
+const getNativeGoogleSignin = () => {
+  try {
+    const hasNative =
+      TurboModuleRegistry?.get?.("RNGoogleSignin") ||
+      NativeModules?.RNGoogleSignin;
+    if (!hasNative) return null;
+    return require("@react-native-google-signin/google-signin");
+  } catch {
+    return null;
+  }
+};
 
 export const GoogleLogo = ({ size = 20 }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24">
@@ -36,18 +49,31 @@ export default function GoogleSignInButton({ title = "Continue with Google", dis
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    try {
-      GoogleSignin.configure({
-        webClientId: GOOGLE_WEB_CLIENT_ID,
-        offlineAccess: false,
-      });
-    } catch (e) {
-      console.warn("GoogleSignin.configure error:", e);
+    const mod = getNativeGoogleSignin();
+    if (mod?.GoogleSignin) {
+      try {
+        mod.GoogleSignin.configure({
+          webClientId: GOOGLE_WEB_CLIENT_ID,
+          offlineAccess: false,
+        });
+      } catch (e) {
+        console.warn("GoogleSignin.configure error:", e);
+      }
     }
   }, []);
 
   const handlePress = async () => {
     if (loading || disabled) return;
+
+    const mod = getNativeGoogleSignin();
+    if (!mod?.GoogleSignin) {
+      toast.info(
+        "Google Sign-In uses native Google Play Services, which is available in your standalone MoneyMint APK. In Expo Go, please sign in with your email & password."
+      );
+      return;
+    }
+
+    const { GoogleSignin, statusCodes } = mod;
     setLoading(true);
     try {
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
@@ -61,11 +87,11 @@ export default function GoogleSignInButton({ title = "Continue with Google", dis
       await loginWithGoogle(idToken);
       toast.success("Signed in with Google successfully!");
     } catch (error) {
-      if (error?.code === statusCodes.SIGN_IN_CANCELLED) {
+      if (error?.code === statusCodes?.SIGN_IN_CANCELLED) {
         // user dismissed dialog
-      } else if (error?.code === statusCodes.IN_PROGRESS) {
-        // in progress
-      } else if (error?.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+      } else if (error?.code === statusCodes?.IN_PROGRESS) {
+        // already in progress
+      } else if (error?.code === statusCodes?.PLAY_SERVICES_NOT_AVAILABLE) {
         toast.error("Google Play Services is not available on this device.");
       } else {
         toast.error(getErrorMessage(error, "Google sign-in failed. Please try again."));
@@ -122,4 +148,3 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
-

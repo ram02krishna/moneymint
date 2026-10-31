@@ -481,6 +481,85 @@ export const Sheet = ({ visible, onClose, title, children }) => {
   );
 };
 
+export const ConfirmSheet = ({
+  visible,
+  onClose,
+  onConfirm,
+  title,
+  message,
+  confirmText = "Delete",
+  cancelText = "Cancel",
+  variant = "danger",
+  icon = "trash-outline",
+  loading = false,
+}) => {
+  const { colors } = useTheme();
+  const tint = variant === "danger" ? colors.danger : colors.primary;
+  const tintSoft = variant === "danger" ? colors.dangerSoft : colors.primarySoft;
+
+  return (
+    <Sheet visible={visible} onClose={loading ? undefined : onClose} title="">
+      <View style={{ alignItems: "center", paddingVertical: 10 }}>
+        <View
+          style={{
+            width: 58,
+            height: 58,
+            borderRadius: 20,
+            backgroundColor: tintSoft,
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: 16,
+          }}
+        >
+          <Ionicons name={icon} size={28} color={tint} />
+        </View>
+        <Text
+          style={{
+            color: colors.text,
+            fontSize: 19,
+            fontWeight: "800",
+            textAlign: "center",
+            marginBottom: 8,
+          }}
+        >
+          {title}
+        </Text>
+        {message ? (
+          <Text
+            style={{
+              color: colors.sub,
+              fontSize: 14,
+              textAlign: "center",
+              lineHeight: 20,
+              paddingHorizontal: 12,
+              marginBottom: 24,
+            }}
+          >
+            {message}
+          </Text>
+        ) : null}
+
+        <View style={{ flexDirection: "row", gap: 12, width: "100%" }}>
+          <Button
+            title={cancelText}
+            variant="ghost"
+            onPress={onClose}
+            disabled={loading}
+            style={{ flex: 1 }}
+          />
+          <Button
+            title={loading ? "Please wait…" : confirmText}
+            variant={variant}
+            onPress={onConfirm}
+            loading={loading}
+            style={{ flex: 1 }}
+          />
+        </View>
+      </View>
+    </Sheet>
+  );
+};
+
 // ---------- stat tile ----------
 export const StatTile = ({ icon, label, value, tint }) => {
   const { colors } = useTheme();
