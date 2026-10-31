@@ -41,33 +41,92 @@ npx expo start
 ```
 Scan the QR code with **Expo Go** on your phone, or press `a` to open an Android emulator.
 
-## 3. Build an Installable Standalone APK
+## 3. Build & Rebuild an Installable Standalone APK
 The app is configured to connect to the deployed production backend (`https://money-mint-backend.vercel.app`), so it works on any Wi-Fi or mobile data network without Expo Go or a computer running.
 
+### A. First-Time Setup (One Time Only)
+If you haven't linked your project or logged in yet:
 ```bash
 # 1. Log in to your Expo account (free at https://expo.dev)
 npx eas-cli login
 
-# 2. Configure project on EAS (only needed once, automatically links projectId)
+# 2. Link your project on EAS (only needed the very first time)
 npx eas-cli init
+```
+*(Note: Your project is already linked with project ID `4a14018b-f356-4aac-8e95-69303537a61b`. You do not need to run `eas init` again).*
 
-# 3. Build the standalone installable .apk
+---
+
+### B. Build / Rebuild the APK (Normal Workflow)
+Whenever you make changes to the app code and want a new APK:
+
+```bash
+cd Mobile
+
+# Standard rebuild command
 npx eas-cli build --platform android --profile preview
+```
 
-# Or build production APK directly:
+> **Tip (Version Increment):** Before rebuilding for an update, bump `versionCode` (e.g., `1` → `2`) and `version` (e.g., `"1.1.0"` → `"1.1.1"`) in `app.json` so Android recognizes the new APK as an update to your existing installed app.
+
+---
+
+### C. Clean Rebuild (Clear Cache)
+If you updated dependencies or want to ensure EAS builds from scratch without using cached artifacts:
+```bash
+npx eas-cli build --platform android --profile preview --clear-cache
+```
+
+---
+
+### D. Check Existing Builds & Download APKs (Without Rebuilding)
+If a build already completed and you just want the download link or QR code again without rebuilding:
+```bash
+# List all previous builds with their status, download URLs, and IDs
+npx eas-cli build:list
+
+# View details of a specific build
+npx eas-cli build:view [BUILD_ID]
+```
+You can also visit your web dashboard directly to download any build:
+👉 **https://expo.dev/accounts/ram02krishna/projects/moneymint/builds**
+
+---
+
+### E. Re-linking EAS Project (Troubleshooting)
+If EAS ever reports that the project ID is invalid or you want to link it to a different account:
+1. Open `app.json` and remove the `extra.eas.projectId` and `owner` lines.
+2. Run:
+   ```bash
+   npx eas-cli init
+   ```
+3. Choose your account and create/link the project.
+
+---
+
+### F. Other Build Profiles
+```bash
+# Standalone APK using the production-apk profile:
 npx eas-cli build --platform android --profile production-apk
 
-# Or build Google Play Store .aab bundle:
+# Google Play Store .aab bundle:
 npx eas-cli build --platform android --profile production
 ```
 
-### Installing the APK on your Android device:
+---
+
+### G. Installing the APK on your Android device:
 1. When the EAS build finishes, it prints a direct download link and a QR code in the terminal.
 2. Open the link on your phone (or scan the QR code) to download the `.apk`.
 3. Open the downloaded `.apk` file and tap **Install** (enable "Install unknown apps" for your browser if prompted).
-4. You can also install it via USB using ADB:
+4. If an older version is already installed on your device:
+   - If Android allows updating, it will install on top preserving data.
+   - If there is a signature or version conflict, uninstall the old app first and install the new APK.
+5. You can also install it via USB using ADB:
    ```bash
    adb install MoneyMint.apk
+   # Or install update replacing existing app:
+   adb install -r MoneyMint.apk
    ```
 
 ## Notes
