@@ -1,8 +1,6 @@
 import React, { useState } from "react";
-import { motion } from "framer-motion";
 import { LuIndianRupee, LuTag, LuFileText } from "react-icons/lu";
 import ModernDatePicker from "../Inputs/ModernDatePicker";
-import { emojiFor } from "../../utils/helper";
 
 const EXPENSE_CATS = [
   "Food",

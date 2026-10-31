@@ -43,10 +43,6 @@ const MonthlyTrendAnalysis = ({ selectedMonth }) => {
     highestIncomeMonth: "",
   });
 
-  useEffect(() => {
-    fetchTrendData();
-  }, [selectedMonth]);
-
   const getFormattedMonth = (date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -93,6 +89,10 @@ const MonthlyTrendAnalysis = ({ selectedMonth }) => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchTrendData();
+  }, [selectedMonth]);
 
   const currentMonthData = trendData[trendData.length - 1];
   const previousMonthData = trendData[trendData.length - 2];

@@ -43,9 +43,7 @@ This is the backend API for my MoneyMint app, built with Node.js and Express. It
    GOOGLE_CLIENT_ID=your_client_id.apps.googleusercontent.com
    ```
 
-3. Run the calculation tests with `npm test`.
-
-4. Run the server:
+3. Run the server:
    ```bash
    npm run dev
    ```

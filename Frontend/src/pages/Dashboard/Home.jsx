@@ -30,7 +30,6 @@ let Home = () => {
   let navigate = useNavigate();
   let [dashboardData, setDashboardData] = useState(null);
   let [monthlyData, setMonthlyData] = useState(null);
-  let [loading, setLoading] = useState(false);
   let { user, updateUser, selectedMonth, setSelectedMonth } =
     useContext(UserContext);
 
@@ -69,9 +68,6 @@ let Home = () => {
       const cached = getCachedData(cacheKey);
       if (cached) {
         setMonthlyData(cached.data);
-        setLoading(false);
-      } else {
-        setLoading(true);
       }
       try {
         const res = await axiosInstance.get(cacheKey);
@@ -82,8 +78,6 @@ let Home = () => {
         if (!cached) {
           setMonthlyData(null);
         }
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -94,8 +88,6 @@ let Home = () => {
     setSelectedMonth(newDate);
   };
 
-  // Use monthly data if available, otherwise fall back to dashboard data
-  const displayData = monthlyData || dashboardData;
   const monthName = selectedMonth.toLocaleString("default", {
     month: "long",
     year: "numeric",

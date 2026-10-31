@@ -3,9 +3,8 @@ import { addThousandsSeparator, CHART_COLORS } from "../../utils/helper";
 import ChartJsPieChart from "../Charts/ChartJsPieChart";
 
 const MonthlyAnalytics = ({ monthlyData, monthName }) => {
-  if (!monthlyData) return null;
-
-  const { expenseByCategory = [], incomeBySource = [] } = monthlyData;
+  const expenseByCategory = monthlyData?.expenseByCategory || [];
+  const incomeBySource = monthlyData?.incomeBySource || [];
 
   const expenseChartData = useMemo(() => {
     return expenseByCategory.map((item) => ({
@@ -20,6 +19,8 @@ const MonthlyAnalytics = ({ monthlyData, monthName }) => {
       value: item.totalAmount,
     }));
   }, [incomeBySource]);
+
+  if (!monthlyData) return null;
 
   return (
     <div className="card w-full">

@@ -887,7 +887,7 @@ export default function Splits() {
             </div>
             <div>
               <label className="field-label block mb-1.5">
-                Friends' MoneyMint Account Emails
+                Friends&apos; MoneyMint Account Emails
               </label>
               <textarea
                 rows={2}
@@ -927,7 +927,7 @@ export default function Splits() {
         >
           <form onSubmit={handleAddMember} className="space-y-4">
             <div>
-              <label className="field-label block mb-1.5">Friend's Account Email *</label>
+              <label className="field-label block mb-1.5">Friend&apos;s Account Email *</label>
               <input
                 type="email"
                 required
@@ -1243,7 +1243,7 @@ export default function Splits() {
               </div>
               <div>
                 <h4 className="text-base font-bold text-gray-900 dark:text-white">
-                  Delete "{activeDetail?.group?.name || "this group"}"?
+                  Delete &ldquo;{activeDetail?.group?.name || "this group"}&rdquo;?
                 </h4>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                   Are you sure you want to permanently delete this group? All shared bills, history, and settlement records for this group will be completely erased.

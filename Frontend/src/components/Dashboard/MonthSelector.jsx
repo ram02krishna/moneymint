@@ -11,8 +11,8 @@ const MonthSelector = ({ selectedMonth, onMonthChange }) => {
   const [displayMonth, setDisplayMonth] = useState(new Date());
   const [isOpen, setIsOpen] = useState(false);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [startYear, setStartYear] = useState(2015);
-  const [endYear, setEndYear] = useState(2035);
+  const startYear = 2015;
+  const endYear = 2035;
 
   const dropdownRef = React.useRef(null);
 

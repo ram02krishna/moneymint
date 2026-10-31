@@ -4,7 +4,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../theme";
 import { useAuth } from "../context/AuthContext";
-import { Badge, Card, EmptyState, Loading, MonthSwitcher, ProgressBar, Screen, SectionTitle, StatTile } from "../components/ui";
+import { Card, EmptyState, Loading, MonthSwitcher, ProgressBar, Screen, SectionTitle, StatTile } from "../components/ui";
 import TransactionRow from "../components/TransactionRow";
 import { BarChart, DonutChart, Legend, LineChart } from "../components/charts";
 import client from "../api/client";
