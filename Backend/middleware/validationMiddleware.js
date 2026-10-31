@@ -240,6 +240,18 @@ const validateLogin = [
   body("password").notEmpty().withMessage("Password is required"),
 ];
 
+// validate google sign in (ID token sent by Google Identity Services)
+const validateGoogleAuth = [
+  body("credential")
+    .isString()
+    .withMessage("Google credential is required")
+    .trim()
+    .notEmpty()
+    .withMessage("Google credential is required")
+    .isLength({ max: 5000 })
+    .withMessage("Invalid Google credential"),
+];
+
 // validate change password
 const validateChangePassword = [
   body("currentPassword")
@@ -321,6 +333,7 @@ module.exports = {
   validateContribution,
   validateRegister,
   validateLogin,
+  validateGoogleAuth,
   validateChangePassword,
   validateForgotPassword,
   validateResetPassword,

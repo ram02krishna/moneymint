@@ -4,6 +4,7 @@ export let API_PATHS = {
   AUTH: {
     LOGIN: "/api/v1/auth/login",
     REGISTER: "/api/v1/auth/register",
+    GOOGLE: "/api/v1/auth/google",
     GET_USER_INFO: "/api/v1/auth/getUser",
     CHANGE_PASSWORD: "/api/v1/auth/change-password",
     UPDATE_USER_INFO: "/api/v1/auth/update",

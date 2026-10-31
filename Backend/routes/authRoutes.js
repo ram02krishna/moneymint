@@ -3,6 +3,7 @@ const { Protect } = require("../middleware/authMiddleware");
 const {
   registerUser,
   loginUser,
+  googleAuth,
   getUserInfo,
   updateUser,
   changePassword,
@@ -15,6 +16,7 @@ const {
   handleValidationErrors,
   validateRegister,
   validateLogin,
+  validateGoogleAuth,
   validateChangePassword,
   validateUpdateUser,
   validateForgotPassword,
@@ -33,6 +35,9 @@ router.post(
 
 // login route
 router.post("/login", validateLogin, handleValidationErrors, loginUser);
+
+// google sign in / sign up
+router.post("/google", validateGoogleAuth, handleValidationErrors, googleAuth);
 
 // get user info
 router.get("/getUser", Protect, getUserInfo);

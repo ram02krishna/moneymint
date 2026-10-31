@@ -26,6 +26,7 @@
     "express-rate-limit": "^8.2.1",
     "express-session": "^1.18.2",
     "express-validator": "^7.3.1",
+    "google-auth-library": "^11.3.2",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.19.2",
@@ -36,9 +37,9 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
-    "eslint": "^9.38.0",
+    "eslint": "^4.0.0",
     "globals": "^16.5.0",
-    "nodemon": "^3.1.10",
+    "nodemon": "^3.1.14",
     "prettier": "^3.6.2",
     "supertest": "^7.1.4"
   }

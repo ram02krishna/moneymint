@@ -6,23 +6,43 @@ const UserSchema = new mongoose.Schema(
   {
     fullName: { type: String, required: true },
     email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
+    // Google-only accounts have no password until they use "Forgot Password"
+    password: {
+      type: String,
+      required: function () {
+        return !this.googleId;
+      },
+    },
+    googleId: { type: String, unique: true, sparse: true },
     profileImageUrl: { type: String, default: null },
     resetPasswordToken: String,
     resetPasswordExpire: Date,
   },
-  { timestamps: true },
+  {
+    timestamps: true,
+    toJSON: {
+      // never send the password hash or reset token to the client
+      transform: (doc, ret) => {
+        delete ret.password;
+        delete ret.resetPasswordToken;
+        delete ret.resetPasswordExpire;
+        return ret;
+      },
+    },
+  },
 );
 
 // hashing password before saving
 UserSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
+  if (!this.isModified("password") || !this.password) return next();
   this.password = await bcrypt.hash(this.password, 10);
   next();
 });
 
 // comparing passwords
 UserSchema.methods.comparePassword = async function (candidatePassword) {
+  // Google-only accounts have no password to compare against
+  if (!this.password || !candidatePassword) return false;
   return await bcrypt.compare(candidatePassword, this.password);
 };
 

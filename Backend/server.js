@@ -28,6 +28,7 @@ app.use(compression());
 app.use(
   helmet({
     crossOriginResourcePolicy: false,
+    crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
   }),
 );
 
@@ -97,7 +98,8 @@ app.set("trust proxy", 1);
 app.use((req, res, next) => {
   if (
     req.path.startsWith("/api/v1/auth/login") ||
-    req.path.startsWith("/api/v1/auth/register")
+    req.path.startsWith("/api/v1/auth/register") ||
+    req.path.startsWith("/api/v1/auth/google")
   ) {
     return authLimiter(req, res, next);
   }

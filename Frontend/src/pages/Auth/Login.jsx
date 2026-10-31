@@ -9,6 +9,8 @@ import axiosInstance from "../../utils/axiosInstance";
 import { API_PATHS } from "../../utils/apiPath";
 import { validateEmail } from "../../utils/helper";
 import AuthBranding from "../../components/layouts/AuthBranding";
+import GoogleAuthButton from "../../components/Auth/GoogleAuthButton";
+import { GOOGLE_CLIENT_ID } from "../../utils/googleConfig";
 
 // Login component
 let Login = () => {
@@ -148,6 +150,19 @@ let Login = () => {
               Sign In
             </motion.button>
           </form>
+          {GOOGLE_CLIENT_ID && (
+            <>
+          {/* Google sign in */}
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+            <span className="text-xs uppercase tracking-wider text-gray-400 dark:text-gray-500">
+              or
+            </span>
+            <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+          </div>
+          <GoogleAuthButton text="signin_with" onError={setError} />
+            </>
+          )}
           {/* Link to sign up page */}
           <p className="text-center text-sm text-gray-500 dark:text-gray-400">
             Don&apos;t have an account?{" "}

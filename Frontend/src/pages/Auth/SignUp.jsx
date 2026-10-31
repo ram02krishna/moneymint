@@ -11,6 +11,8 @@ import { UserContext } from "../../context/UserContextDefinition";
 import uploadImage from "../../utils/uploadImage";
 import AuthBranding from "../../components/layouts/AuthBranding";
 import ProfilePhotoSelector from "../../components/Inputs/ProfilePhotoSelector";
+import GoogleAuthButton from "../../components/Auth/GoogleAuthButton";
+import { GOOGLE_CLIENT_ID } from "../../utils/googleConfig";
 
 // SignUp component
 let SignUp = () => {
@@ -209,6 +211,19 @@ let SignUp = () => {
               Sign Up
             </motion.button>
           </form>
+          {GOOGLE_CLIENT_ID && (
+            <>
+          {/* Google sign in */}
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+            <span className="text-xs uppercase tracking-wider text-gray-400 dark:text-gray-500">
+              or
+            </span>
+            <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+          </div>
+          <GoogleAuthButton text="signup_with" onError={setError} />
+            </>
+          )}
           {/* Link to login page */}
           <p className="text-center text-sm text-gray-500 dark:text-gray-400">
             Already have an account?{" "}

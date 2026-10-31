@@ -6,6 +6,17 @@ const AppError = require("../utils/AppError");
 const { validateEmail, validateObjectId } = require("../utils/queryValidator");
 const crypto = require("crypto");
 const sendEmail = require("../utils/sendEmail");
+const { OAuth2Client } = require("google-auth-library");
+
+// Google Client ID(s) from Google Cloud Console. Comma separate to allow
+// more than one (e.g. web + Android + iOS client IDs).
+const getGoogleClientIds = () =>
+  (process.env.GOOGLE_CLIENT_ID || "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+
+const googleClient = new OAuth2Client();
 
 const generateToken = (id) => {
   if (!process.env.JWT_SECRET) {
@@ -49,6 +60,17 @@ exports.loginUser = asyncHandler(async (req, res, next) => {
   let myEmail = validateEmail(email);
 
   let foundUser = await User.findOne({ email: myEmail }).select("+password");
+
+  // account created with Google and no password set yet
+  if (foundUser && !foundUser.password) {
+    return next(
+      new AppError(
+        'This account uses Google sign-in. Use "Continue with Google", or reset your password to also log in with email.',
+        400,
+      ),
+    );
+  }
+
   if (!foundUser || !(await foundUser.comparePassword(password))) {
     return next(new AppError("Wrong email or password", 401));
   }
@@ -59,6 +81,69 @@ exports.loginUser = asyncHandler(async (req, res, next) => {
     data: {
       user: foundUser,
     },
+  });
+});
+
+// google sign in / sign up (one endpoint does both)
+exports.googleAuth = asyncHandler(async (req, res, next) => {
+  const clientIds = getGoogleClientIds();
+  if (clientIds.length === 0) {
+    return next(new AppError("GOOGLE_CLIENT_ID is missing", 500));
+  }
+
+  // verify the ID token with Google (signature, expiry, audience, issuer)
+  let payload;
+  try {
+    const ticket = await googleClient.verifyIdToken({
+      idToken: req.body.credential,
+      audience: clientIds,
+    });
+    payload = ticket.getPayload();
+  } catch (error) {
+    console.error("Google verifyIdToken error:", error?.message || error);
+    return next(new AppError("Google sign-in failed. Please try again.", 401));
+  }
+
+  if (!payload || !payload.sub || !payload.email) {
+    return next(new AppError("Google sign-in failed. Please try again.", 401));
+  }
+  if (!payload.email_verified) {
+    return next(new AppError("Your Google email is not verified.", 401));
+  }
+
+  const googleId = payload.sub;
+  const email = payload.email.trim().toLowerCase();
+  const picture = payload.picture || null;
+
+  // 1) returning Google user
+  let user = await User.findOne({ googleId });
+  let isNewUser = false;
+
+  if (!user) {
+    // 2) existing email/password account -> link Google to it
+    user = await User.findOne({ email });
+
+    if (user) {
+      user.googleId = googleId;
+      if (!user.profileImageUrl && picture) user.profileImageUrl = picture;
+      await user.save({ validateBeforeSave: false });
+    } else {
+      // 3) brand new user -> sign up
+      user = await User.create({
+        fullName: payload.name || email.split("@")[0],
+        email,
+        googleId,
+        profileImageUrl: picture,
+      });
+      isNewUser = true;
+    }
+  }
+
+  res.status(isNewUser ? 201 : 200).json({
+    status: "success",
+    token: generateToken(user._id),
+    isNewUser,
+    data: { user },
   });
 });
 
@@ -104,6 +189,15 @@ exports.changePassword = asyncHandler(async (req, res, next) => {
   let { currentPassword, newPassword } = req.body;
 
   let myUser = await User.findById(req.user.id).select("+password");
+
+  if (myUser && !myUser.password) {
+    return next(
+      new AppError(
+        'This account uses Google sign-in and has no password yet. Use "Forgot Password" on the login page to set one.',
+        400,
+      ),
+    );
+  }
 
   if (!myUser || !(await myUser.comparePassword(currentPassword))) {
     return next(new AppError("Wrong current password", 401));
