@@ -42,9 +42,10 @@ export const getErrorMessage = (error, fallback = "Something went wrong") => {
     if (data?.errors?.length) return data.errors[0].msg || fallback;
     return data?.message || fallback;
   }
-  if (!error?.response) {
-    const detail = error?.message ? `: ${error.message}` : "";
-    return `Cannot reach server (${API_URL})${detail}. Check internet connection or API URL.`;
+  // Only axios errors can be real network failures. Errors from native modules
+  // (e.g. Google Sign-In) must not be reported as "cannot reach server".
+  if (error?.isAxiosError && !error?.response) {
+    return "Cannot reach the server. Please check your internet connection and try again.";
   }
   return fallback;
 };

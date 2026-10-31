@@ -21,6 +21,32 @@ const getNativeGoogleSignin = () => {
   }
 };
 
+let googleConfigured = false;
+const ensureGoogleConfigured = (GoogleSignin) => {
+  if (googleConfigured) return;
+  GoogleSignin.configure({
+    // Must be the *Web application* OAuth client ID (same one the backend verifies against).
+    webClientId: GOOGLE_WEB_CLIENT_ID,
+    offlineAccess: false,
+  });
+  googleConfigured = true;
+};
+
+// Turn native Google Sign-In errors into messages a user (and you) can act on.
+const googleErrorMessage = (error) => {
+  const code = String(error?.code ?? "");
+  if (code === "10" || /DEVELOPER_ERROR/i.test(error?.message || "")) {
+    return "Google Sign-In is not set up for this app build yet (DEVELOPER_ERROR). The Android OAuth client's package name / SHA-1 must match this APK's signing key.";
+  }
+  if (code === "7" || /NETWORK_ERROR/i.test(error?.message || "")) {
+    return "Network problem while contacting Google. Check your connection and try again.";
+  }
+  if (code === "12500") {
+    return "Google Sign-In failed. Update Google Play Services and try again.";
+  }
+  return null;
+};
+
 export const GoogleLogo = ({ size = 20 }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24">
     <Path
@@ -52,10 +78,7 @@ export default function GoogleSignInButton({ title = "Continue with Google", dis
     const mod = getNativeGoogleSignin();
     if (mod?.GoogleSignin) {
       try {
-        mod.GoogleSignin.configure({
-          webClientId: GOOGLE_WEB_CLIENT_ID,
-          offlineAccess: false,
-        });
+        ensureGoogleConfigured(mod.GoogleSignin);
       } catch (e) {
         console.warn("GoogleSignin.configure error:", e);
       }
@@ -76,8 +99,18 @@ export default function GoogleSignInButton({ title = "Continue with Google", dis
     const { GoogleSignin, statusCodes } = mod;
     setLoading(true);
     try {
+      ensureGoogleConfigured(GoogleSignin);
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      // Clear any cached Google session so the account chooser always appears
+      // (and a stale/previous account is never silently reused).
+      try {
+        await GoogleSignin.signOut();
+      } catch {
+        // nothing to sign out of
+      }
       const response = await GoogleSignin.signIn();
+      // v13+ resolves with { type: "cancelled" } instead of throwing when the user dismisses the dialog
+      if (response?.type === "cancelled") return;
       const idToken = response?.data?.idToken || response?.idToken;
 
       if (!idToken) {
@@ -94,7 +127,8 @@ export default function GoogleSignInButton({ title = "Continue with Google", dis
       } else if (error?.code === statusCodes?.PLAY_SERVICES_NOT_AVAILABLE) {
         toast.error("Google Play Services is not available on this device.");
       } else {
-        toast.error(getErrorMessage(error, "Google sign-in failed. Please try again."));
+        console.warn("Google sign-in error:", error?.code, error?.message);
+        toast.error(googleErrorMessage(error) || getErrorMessage(error, "Google sign-in failed. Please try again."));
       }
     } finally {
       setLoading(false);

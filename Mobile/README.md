@@ -53,7 +53,7 @@ npx eas-cli login
 # 2. Link your project on EAS (only needed the very first time)
 npx eas-cli init
 ```
-*(Note: Your project is already linked with project ID `4a14018b-f356-4aac-8e95-69303537a61b`. You do not need to run `eas init` again).*
+*(Note: Your project is already linked with project ID `609eb442-258e-4859-9d8c-c7ded7872d05`. You do not need to run `eas init` again).*
 
 ---
 
@@ -131,4 +131,12 @@ npx eas-cli build --platform android --profile production
 
 ## Notes
 - JWTs from the backend last 1 hour; when one expires the app returns to the login screen automatically.
-- Profile photo upload is not in the mobile app yet (web only).
+
+## Google Sign-In on Android (required one-time setup)
+`DEVELOPER_ERROR` means Google does not recognise the APK. Fix it in Google Cloud Console:
+1. Get the SHA-1 of the key that signs your APK: `npx eas-cli credentials -p android` -> pick the build profile -> *Keystore* -> copy **SHA1 Fingerprint**.
+2. APIs & Services -> Credentials -> **Create credentials -> OAuth client ID -> Android**:
+   package name `com.moneymint.app`, paste the SHA-1. (Add a second Android client for every other signing key: Play App Signing key, local debug key.)
+3. Keep the **Web application** client ID as `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` and in the backend `GOOGLE_CLIENT_ID`.
+4. OAuth consent screen: set to *In production*, or add your Gmail as a test user.
+5. Rebuild the APK (changes in Cloud Console can take a few minutes to apply).

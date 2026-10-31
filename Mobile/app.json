@@ -2,7 +2,7 @@
   "expo": {
     "name": "MoneyMint",
     "slug": "moneymint",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "scheme": "moneymint",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -14,22 +14,24 @@
     },
     "android": {
       "package": "com.moneymint.app",
-      "versionCode": 1,
+      "versionCode": 2,
       "allowBackup": false,
-      "usesCleartextTraffic": true,
+      "usesCleartextTraffic": false,
       "permissions": [
-        "android.permission.INTERNET",
-        "android.permission.CAMERA",
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.INTERNET"
       ],
       "adaptiveIcon": {
         "backgroundColor": "#4f46e5",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
-      }
+      },
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ]
     },
     "plugins": [
       "@react-native-google-signin/google-signin",
