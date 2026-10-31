@@ -3,6 +3,7 @@ import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, Vie
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../theme";
 import { Button, Input } from "../components/ui";
+import GoogleSignInButton from "../components/GoogleSignInButton";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import client, { getErrorMessage } from "../api/client";
@@ -49,6 +50,17 @@ const LinkText = ({ lead, link, onPress }) => {
   );
 };
 
+const OrDivider = () => {
+  const { colors } = useTheme();
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", marginVertical: 18 }}>
+      <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
+      <Text style={{ marginHorizontal: 12, color: colors.sub, fontSize: 12, fontWeight: "700", letterSpacing: 0.5 }}>OR</Text>
+      <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
+    </View>
+  );
+};
+
 export const LoginScreen = ({ navigation }) => {
   const { login } = useAuth();
   const toast = useToast();
@@ -84,6 +96,8 @@ export const LoginScreen = ({ navigation }) => {
         <Text style={{ color: "#7c3aed", fontWeight: "600" }}>Forgot password?</Text>
       </Pressable>
       <Button title="Log in" onPress={submit} loading={loading} />
+      <OrDivider />
+      <GoogleSignInButton title="Sign in with Google" disabled={loading} />
     </AuthLayout>
   );
 };
@@ -122,6 +136,8 @@ export const SignUpScreen = ({ navigation }) => {
       <Input label="Email" value={form.email} onChangeText={(v) => set("email", v)} autoCapitalize="none" keyboardType="email-address" placeholder="you@example.com" error={errors.email} />
       <Input label="Password" value={form.password} onChangeText={(v) => set("password", v)} secure placeholder="Min. 8 characters" error={errors.password} />
       <Button title="Sign up" onPress={submit} loading={loading} />
+      <OrDivider />
+      <GoogleSignInButton title="Sign up with Google" disabled={loading} />
     </AuthLayout>
   );
 };

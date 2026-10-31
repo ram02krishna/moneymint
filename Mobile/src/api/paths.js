@@ -8,6 +8,7 @@ export const API_PATHS = {
     UPDATE_USER_INFO: "/api/v1/auth/update",
     FORGOT_PASSWORD: "/api/v1/auth/forgot-password",
     RESET_PASSWORD: "/api/v1/auth/reset-password",
+    GOOGLE: "/api/v1/auth/google",
   },
   DASHBOARD: {
     GET_DATA: "/api/v1/dashboard",

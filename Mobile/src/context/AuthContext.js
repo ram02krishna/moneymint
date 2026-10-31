@@ -61,9 +61,18 @@ export const AuthProvider = ({ children }) => {
     [startSession],
   );
 
+  const loginWithGoogle = useCallback(
+    async (idToken) => {
+      const res = await client.post(API_PATHS.AUTH.GOOGLE, { credential: idToken });
+      await startSession(res.data.token, res.data.data.user);
+      return res.data;
+    },
+    [startSession],
+  );
+
   const value = useMemo(
-    () => ({ user, booting, login, register, logout: clearSession, setUser }),
-    [user, booting, login, register, clearSession],
+    () => ({ user, booting, login, register, loginWithGoogle, logout: clearSession, setUser }),
+    [user, booting, login, register, loginWithGoogle, clearSession],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
