@@ -36,7 +36,8 @@ const ModernDatePicker = ({
   value,
   onChange,
   error,
-  label,
+  label = "Date",
+  showRequired = true,
   colorTheme = "purple",
   className = "",
   inputClassName = "",
@@ -249,11 +250,17 @@ const ModernDatePicker = ({
   const weekDays = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
   return (
-    <div className={`space-y-2 ${className}`}>
-      <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-        {React.isValidElement(label) ? label : label || "Date"}{" "}
-        <span className={theme.accent}>*</span>
-      </label>
+    <div className={`${label ? "space-y-1.5" : ""} ${className}`}>
+      {label ? (
+        <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300">
+          {React.isValidElement(label) ? (
+            label
+          ) : (
+            <span>{label}</span>
+          )}
+          {showRequired && <span className={theme.accent}>*</span>}
+        </label>
+      ) : null}
 
       {/* Input container */}
       <div className="relative" ref={triggerRef}>
