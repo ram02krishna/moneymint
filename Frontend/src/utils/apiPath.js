@@ -56,4 +56,37 @@ export let API_PATHS = {
     GET_ALL_TRANSACTIONS: "/api/v1/transactions",
     DOWNLOAD_EXCEL: "/api/v1/transactions/download-excel",
   },
+  SPLIT: {
+    DASHBOARD: "/api/v1/split/dashboard",
+    GROUPS: {
+      GET_ALL: "/api/v1/split/groups",
+      CREATE: "/api/v1/split/groups",
+      GET_ONE: (id) => `/api/v1/split/groups/${id}`,
+      UPDATE: (id) => `/api/v1/split/groups/${id}`,
+      DELETE: (id) => `/api/v1/split/groups/${id}`,
+      ADD_MEMBER: (id) => `/api/v1/split/groups/${id}/members`,
+      REMOVE_MEMBER: (id, memberId) => `/api/v1/split/groups/${id}/members/${memberId}`,
+    },
+    FRIENDS: {
+      GET_ALL: "/api/v1/split/friends",
+      ADD: "/api/v1/split/friends",
+      SEARCH_USERS: (q) => `/api/v1/split/friends/search-users?q=${encodeURIComponent(q)}`,
+      GET_ONE: (id) => `/api/v1/split/friends/${id}`,
+      DELETE: (id) => `/api/v1/split/friends/${id}`,
+    },
+    EXPENSES: {
+      GET_ALL: "/api/v1/split/expenses",
+      CREATE: "/api/v1/split/expenses",
+      GET_ONE: (id) => `/api/v1/split/expenses/${id}`,
+      UPDATE: (id) => `/api/v1/split/expenses/${id}`,
+      DELETE: (id) => `/api/v1/split/expenses/${id}`,
+    },
+    SETTLEMENTS: {
+      GET_ALL: "/api/v1/split/settlements",
+      CREATE: "/api/v1/split/settlements",
+      DELETE: (id) => `/api/v1/split/settlements/${id}`,
+    },
+    ACTIVITY: "/api/v1/split/activity",
+    ANALYTICS: "/api/v1/split/analytics",
+  },
 };

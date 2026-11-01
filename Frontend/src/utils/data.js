@@ -8,6 +8,7 @@ import {
   LuChartColumn,
   LuChartPie,
   LuTarget,
+  LuUsers,
 } from "react-icons/lu";
 
 export let SIDE_MENU_DATA = [
@@ -57,12 +58,19 @@ export let SIDE_MENU_DATA = [
   },
   {
     id: "09",
+    label: "Split Expenses",
+    icon: LuUsers,
+    path: "/split-expenses",
+    isNew: true,
+  },
+  {
+    id: "10",
     label: "Settings",
     icon: LuSettings,
     path: "/settings",
   },
   {
-    id: "10",
+    id: "11",
     label: "Logout",
     icon: LuLogOut,
     path: "/logout",
