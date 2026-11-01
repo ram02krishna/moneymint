@@ -45,6 +45,7 @@ let MonthlyAnalyticsPage = lazy(
 );
 let Budgets = lazy(() => import("./pages/Dashboard/Budgets"));
 let Goals = lazy(() => import("./pages/Dashboard/Goals"));
+let SplitExpenses = lazy(() => import("./pages/Dashboard/SplitExpenses"));
 
 // wrapper for protected routes
 let ProtectedRoute = ({ Component }) => {
@@ -105,6 +106,10 @@ let App = () => {
                     <Route
                       path="/goals"
                       element={<ProtectedRoute Component={Goals} />}
+                    />
+                    <Route
+                      path="/split-expenses"
+                      element={<ProtectedRoute Component={SplitExpenses} />}
                     />
                     <Route
                       path="/settings"
