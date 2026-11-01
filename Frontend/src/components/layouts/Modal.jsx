@@ -2,9 +2,15 @@ import React, { useEffect, useId } from "react";
 import ReactDOM from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 
-// Accessible dialog: closes on Escape / backdrop click, locks page scroll while open
-// and animates in and out without any state juggling.
-const Modal = ({ children, isOpen, onClose, title }) => {
+// Accessible dialog: closes on Escape / backdrop click, locks page scroll while open,
+// bounded to viewport height with pinned header and smooth internal scrolling.
+const Modal = ({
+  children,
+  isOpen,
+  onClose,
+  title,
+  maxWidth = "max-w-2xl",
+}) => {
   const titleId = useId();
 
   useEffect(() => {
@@ -26,7 +32,7 @@ const Modal = ({ children, isOpen, onClose, title }) => {
       {isOpen && (
         <motion.div
           key="backdrop"
-          className="fixed inset-0 z-[100] flex justify-center items-start sm:items-center overflow-y-auto overflow-x-hidden bg-gray-900/60 backdrop-blur-sm"
+          className="fixed inset-0 z-[100] flex justify-center items-center overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-6 bg-gray-900/60 backdrop-blur-sm"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -39,20 +45,20 @@ const Modal = ({ children, isOpen, onClose, title }) => {
             role="dialog"
             aria-modal="true"
             aria-labelledby={titleId}
-            className="relative p-4 md:p-6 w-full max-w-2xl mx-auto"
+            className={`relative w-full ${maxWidth} my-auto`}
             initial={{ opacity: 0, y: 16, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.97 }}
             transition={{ type: "spring", stiffness: 380, damping: 32 }}
           >
-            <div className="relative bg-white dark:bg-gray-800 rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] border border-gray-100 dark:border-gray-700">
-              <div className="flex items-center justify-between px-6 md:px-8 py-5 border-b border-gray-100 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-800/50 rounded-t-3xl">
-                <h3 id={titleId} className="text-xl font-bold text-gray-900 dark:text-white">
+            <div className="relative bg-white dark:bg-gray-800 rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] border border-gray-100 dark:border-gray-700 flex flex-col max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-3.5rem)] overflow-hidden">
+              <div className="flex items-center justify-between px-5 sm:px-6 md:px-8 py-4 sm:py-5 border-b border-gray-100 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-800/50 rounded-t-3xl shrink-0">
+                <h3 id={titleId} className="text-xl font-bold text-gray-900 dark:text-white truncate pr-2">
                   {title}
                 </h3>
                 <button
                   type="button"
-                  className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full w-10 h-10 inline-flex shrink-0 justify-center items-center transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-500/30"
+                  className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full w-9 h-9 inline-flex shrink-0 justify-center items-center transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-500/30"
                   onClick={onClose}
                   aria-label="Close dialog"
                 >
@@ -61,7 +67,9 @@ const Modal = ({ children, isOpen, onClose, title }) => {
                   </svg>
                 </button>
               </div>
-              <div className="p-6 md:p-8">{children}</div>
+              <div className="p-5 sm:p-6 md:p-8 overflow-y-auto flex-1 custom-scrollbar">
+                {children}
+              </div>
             </div>
           </motion.div>
         </motion.div>
