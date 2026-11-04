@@ -276,6 +276,7 @@ export const ForgotPasswordScreen = ({ navigation }) => {
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
@@ -298,11 +299,12 @@ export const ForgotPasswordScreen = ({ navigation }) => {
     const e = {};
     if (otp.trim().length !== 6) e.otp = "Enter the 6-digit OTP";
     if (password.length < 8) e.password = "At least 8 characters";
+    if (confirmPassword !== password) e.confirmPassword = "Passwords do not match";
     setErrors(e);
     if (Object.keys(e).length) return;
     setLoading(true);
     try {
-      await client.post(API_PATHS.AUTH.RESET_PASSWORD, { email: email.trim(), otp: otp.trim(), password });
+      await client.put(API_PATHS.AUTH.RESET_PASSWORD, { email: email.trim(), otp: otp.trim(), password });
       toast.success("Password reset. Please log in.");
       navigation.navigate("Login");
     } catch (error) {
@@ -327,6 +329,7 @@ export const ForgotPasswordScreen = ({ navigation }) => {
         <>
           <Input label="OTP" value={otp} onChangeText={setOtp} keyboardType="number-pad" maxLength={6} placeholder="123456" error={errors.otp} />
           <Input label="New password" value={password} onChangeText={setPassword} secure error={errors.password} />
+          <Input label="Confirm new password" value={confirmPassword} onChangeText={setConfirmPassword} secure error={errors.confirmPassword} />
           <Button title="Reset password" onPress={reset} loading={loading} />
         </>
       )}
