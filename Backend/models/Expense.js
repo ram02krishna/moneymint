@@ -9,13 +9,10 @@ const ExpenseSchema = new mongoose.Schema(
     category: { type: String, required: true },
     date: { type: Date, default: Date.now },
     description: { type: String },
-    notes: { type: String },
   },
   { timestamps: true },
 );
 
 ExpenseSchema.index({ user: 1, date: -1 });
-ExpenseSchema.index({ user: 1 });
-ExpenseSchema.index({ date: -1 });
 
 module.exports = mongoose.model("Expense", ExpenseSchema);

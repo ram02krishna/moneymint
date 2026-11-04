@@ -1,13 +1,11 @@
 let cache = {};
 
-export let getCachedData = (key) => {
-  return cache[key] || null;
-};
+export const getCachedData = (key) => cache[key] || null;
 
-export let setCachedData = (key, data) => {
+export const setCachedData = (key, data) => {
   cache[key] = data;
 };
 
-export let clearCache = () => {
+export const clearCache = () => {
   cache = {};
 };

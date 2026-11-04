@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, FlatList, Text, TextInput, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
@@ -38,7 +38,6 @@ export default function TransactionsScreen({ navigation, route }) {
       setLoading(true);
       setFilter(f);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [route.params?.filter, route.params?.stamp]);
 
   // debounce search typing

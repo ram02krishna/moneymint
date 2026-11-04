@@ -15,7 +15,7 @@ const OtpSchema = new mongoose.Schema(
     },
     purpose: {
       type: String,
-      enum: ["signup", "reset_password"],
+      enum: ["signup"],
       default: "signup",
       index: true,
     },

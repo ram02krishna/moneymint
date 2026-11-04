@@ -1,11 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Calendar,
-  ChevronUp,
-  ChevronDown,
-} from "lucide-react";
+import { LuChevronLeft, LuChevronRight, LuCalendar, LuChevronUp, LuChevronDown } from "react-icons/lu";
 
 const MonthSelector = ({ selectedMonth, onMonthChange }) => {
   const [displayMonth, setDisplayMonth] = useState(new Date());
@@ -122,7 +116,7 @@ const MonthSelector = ({ selectedMonth, onMonthChange }) => {
           title="Previous Month"
           aria-label="Previous Month"
         >
-          <ChevronLeft size={16} className="sm:w-[18px] sm:h-[18px]" />
+          <LuChevronLeft size={16} className="sm:w-[18px] sm:h-[18px]" />
         </button>
 
         {/* Month Picker dropdown trigger */}
@@ -131,11 +125,11 @@ const MonthSelector = ({ selectedMonth, onMonthChange }) => {
             onClick={() => setIsOpen(!isOpen)}
             className="flex items-center gap-1 sm:gap-2 px-2.5 sm:px-4 py-1.5 bg-purple-50 hover:bg-purple-100 dark:bg-purple-900/20 dark:hover:bg-purple-900/40 border border-purple-200/50 dark:border-purple-800/30 rounded-lg hover:shadow-sm transition-all duration-200 whitespace-nowrap text-purple-700 dark:text-purple-400 font-semibold text-xs sm:text-sm"
           >
-            <Calendar size={14} className="sm:w-[16px] sm:h-[16px]" />
+            <LuCalendar size={14} className="sm:w-[16px] sm:h-[16px]" />
             <span>
               {monthNames[displayMonth.getMonth()]} {displayMonth.getFullYear()}
             </span>
-            <ChevronDown
+            <LuChevronDown
               size={12}
               className="opacity-80 sm:w-[14px] sm:h-[14px]"
             />
@@ -155,7 +149,7 @@ const MonthSelector = ({ selectedMonth, onMonthChange }) => {
                     disabled={selectedYear <= startYear}
                     className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
                   >
-                    <ChevronUp size={16} />
+                    <LuChevronUp size={16} />
                   </button>
                   <select
                     value={selectedYear}
@@ -173,7 +167,7 @@ const MonthSelector = ({ selectedMonth, onMonthChange }) => {
                     disabled={selectedYear >= endYear}
                     className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
                   >
-                    <ChevronDown size={16} />
+                    <LuChevronDown size={16} />
                   </button>
                 </div>
               </div>
@@ -227,7 +221,7 @@ const MonthSelector = ({ selectedMonth, onMonthChange }) => {
           title="Next Month"
           aria-label="Next Month"
         >
-          <ChevronRight size={16} className="sm:w-[18px] sm:h-[18px]" />
+          <LuChevronRight size={16} className="sm:w-[18px] sm:h-[18px]" />
         </button>
       </div>
 

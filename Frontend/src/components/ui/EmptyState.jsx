@@ -1,4 +1,3 @@
-import React from "react";
 
 const EmptyState = ({ icon, title, message, action }) => (
   <div className="card flex flex-col items-center text-center py-14 px-6">

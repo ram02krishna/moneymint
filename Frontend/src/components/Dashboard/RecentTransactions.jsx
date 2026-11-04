@@ -1,4 +1,4 @@
-import React, { memo } from "react";
+import { memo } from "react";
 import TransactionsTable from "../Transactions/TransactionsTable";
 import { LuArrowRight } from "react-icons/lu";
 

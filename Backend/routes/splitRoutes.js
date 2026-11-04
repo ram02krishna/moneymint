@@ -28,7 +28,6 @@ router.delete("/friends/:id", splitController.deleteFriend);
 // Shared Expenses
 router.post("/expenses", splitController.createSplitExpense);
 router.get("/expenses", splitController.getSplitExpenses);
-router.get("/expenses/:id", splitController.getSplitExpenseById);
 router.put("/expenses/:id", splitController.updateSplitExpense);
 router.delete("/expenses/:id", splitController.deleteSplitExpense);
 

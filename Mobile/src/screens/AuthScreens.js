@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useEffect, useState } from "react";
 import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../theme";
@@ -110,28 +110,17 @@ export const SignUpScreen = ({ navigation }) => {
   const [form, setForm] = useState({ fullName: "", email: "", password: "" });
   const [otp, setOtp] = useState("");
   const [timeLeft, setTimeLeft] = useState(45);
-  const [canResend, setCanResend] = useState(false);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
+  const canResend = timeLeft === 0;
+
   useEffect(() => {
-    let timer;
-    if (step === 2 && timeLeft > 0) {
-      timer = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            setCanResend(true);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } else if (step === 2 && timeLeft === 0) {
-      setCanResend(true);
-    }
-    return () => clearInterval(timer);
+    if (step !== 2 || timeLeft === 0) return undefined;
+    const timer = setTimeout(() => setTimeLeft((t) => t - 1), 1000);
+    return () => clearTimeout(timer);
   }, [step, timeLeft]);
 
   const requestOtp = async () => {
@@ -147,7 +136,6 @@ export const SignUpScreen = ({ navigation }) => {
       toast.success("Verification code sent to your email");
       setStep(2);
       setTimeLeft(45);
-      setCanResend(false);
       setOtp("");
     } catch (error) {
       toast.error(getErrorMessage(error, "Sign up failed"));
@@ -163,7 +151,6 @@ export const SignUpScreen = ({ navigation }) => {
       await resendSignupOtp({ email: form.email.trim(), fullName: form.fullName.trim() });
       toast.success("New 6-digit code sent to your email");
       setTimeLeft(45);
-      setCanResend(false);
       setOtp("");
     } catch (error) {
       toast.error(getErrorMessage(error, "Could not resend OTP"));

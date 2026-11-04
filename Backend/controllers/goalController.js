@@ -3,11 +3,10 @@ const asyncHandler = require("../utils/asyncHandler");
 const AppError = require("../utils/AppError");
 const { validateObjectId } = require("../utils/queryValidator");
 
-// create a goal
 exports.createGoal = asyncHandler(async (req, res) => {
-  let { title, icon, targetAmount, deadline } = req.body;
+  const { title, icon, targetAmount, deadline } = req.body;
 
-  let goal = await Goal.create({
+  const goal = await Goal.create({
     user: req.user.id,
     title,
     icon: icon || "🎯",
@@ -18,33 +17,22 @@ exports.createGoal = asyncHandler(async (req, res) => {
   res.status(201).json({ status: "success", data: { goal } });
 });
 
-// get all goals of the user
 exports.getGoals = asyncHandler(async (req, res) => {
-  let goals = await Goal.find({ user: req.user.id })
-    .sort({ createdAt: -1 })
-    .lean();
-
-  res.status(200).json({
-    status: "success",
-    results: goals.length,
-    data: { goals },
-  });
+  const goals = await Goal.find({ user: req.user.id }).sort({ createdAt: -1 }).lean();
+  res.status(200).json({ status: "success", results: goals.length, data: { goals } });
 });
 
 // update goal details (not the saved amount)
 exports.updateGoal = asyncHandler(async (req, res, next) => {
-  let gId = validateObjectId(req.params.id, "Goal ID");
-  let uId = validateObjectId(req.user.id, "User ID");
-
-  let { title, icon, targetAmount, deadline } = req.body;
-  let update = { title, targetAmount, deadline: deadline || null };
+  const { title, icon, targetAmount, deadline } = req.body;
+  const update = { title, targetAmount, deadline: deadline || null };
   if (icon) update.icon = icon;
 
-  let goal = await Goal.findOneAndUpdate({ _id: gId, user: uId }, update, {
-    new: true,
-    runValidators: true,
-  });
-
+  const goal = await Goal.findOneAndUpdate(
+    { _id: validateObjectId(req.params.id, "Goal ID"), user: req.user.id },
+    update,
+    { new: true, runValidators: true },
+  );
   if (!goal) return next(new AppError("Cannot find goal to update", 404));
 
   res.status(200).json({ status: "success", data: { goal } });
@@ -52,33 +40,37 @@ exports.updateGoal = asyncHandler(async (req, res, next) => {
 
 // add money to a goal (negative amount = withdraw)
 exports.addContribution = asyncHandler(async (req, res, next) => {
-  let gId = validateObjectId(req.params.id, "Goal ID");
-  let uId = validateObjectId(req.user.id, "User ID");
+  const goalId = validateObjectId(req.params.id, "Goal ID");
+  const amount = Number(req.body.amount);
+  const { note } = req.body;
 
-  let amount = Number(req.body.amount);
-  let note = req.body.note;
+  // One atomic update: the saved amount can never go negative, even with two requests at once.
+  const filter = { _id: goalId, user: req.user.id };
+  if (amount < 0) filter.savedAmount = { $gte: -amount };
 
-  let goal = await Goal.findOne({ _id: gId, user: uId });
-  if (!goal) return next(new AppError("Cannot find goal", 404));
+  const goal = await Goal.findOneAndUpdate(
+    filter,
+    { $inc: { savedAmount: amount }, $push: { contributions: { amount, note } } },
+    { new: true },
+  );
 
-  if (goal.savedAmount + amount < 0) {
-    return next(new AppError("Cannot withdraw more than saved amount", 400));
+  if (!goal) {
+    const exists = await Goal.exists({ _id: goalId, user: req.user.id });
+    return next(
+      exists
+        ? new AppError("Cannot withdraw more than saved amount", 400)
+        : new AppError("Cannot find goal", 404),
+    );
   }
-
-  goal.savedAmount = goal.savedAmount + amount;
-  goal.contributions.push({ amount, note });
-  await goal.save();
 
   res.status(200).json({ status: "success", data: { goal } });
 });
 
-// delete goal
 exports.deleteGoal = asyncHandler(async (req, res, next) => {
-  let gId = validateObjectId(req.params.id, "Goal ID");
-  let uId = validateObjectId(req.user.id, "User ID");
-
-  let goal = await Goal.findOneAndDelete({ _id: gId, user: uId });
+  const goal = await Goal.findOneAndDelete({
+    _id: validateObjectId(req.params.id, "Goal ID"),
+    user: req.user.id,
+  });
   if (!goal) return next(new AppError("Cannot find goal to delete", 404));
-
-  res.status(204).json({ status: "success", data: null });
+  res.status(204).end();
 });

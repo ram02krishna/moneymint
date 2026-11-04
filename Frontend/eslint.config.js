@@ -39,10 +39,8 @@ export default [
         "warn",
         { allowConstantExport: true },
       ],
-      "no-unused-vars": [
-        "error",
-        { varsIgnorePattern: "^[A-Z_]", argsIgnorePattern: "^_" },
-      ],
+      // No varsIgnorePattern on purpose: a capitalised pattern would hide unused imports of components and icons.
+      "no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
       "react/prop-types": "off",
     },
   },

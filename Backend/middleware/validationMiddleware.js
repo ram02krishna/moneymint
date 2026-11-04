@@ -4,29 +4,14 @@ const { body, validationResult, param } = require("express-validator");
 const handleValidationErrors = (req, res, next) => {
   let errors = validationResult(req);
   if (!errors.isEmpty()) {
-    console.error("Validation errors:", errors.array());
+    const list = errors.array();
+    // message carries the first problem so clients that only show `message` stay useful
     return res.status(400).json({
-      message: "Validation errors",
-      errors: errors.array(),
+      status: "fail",
+      message: list[0].msg,
+      errors: list,
     });
   }
-  next();
-};
-
-// sanitize mongodb params
-const sanitizeMongoParams = (req, res, next) => {
-  Object.keys(req.params).forEach((key) => {
-    if (typeof req.params[key] === "string") {
-      req.params[key] = req.params[key].trim();
-    }
-  });
-
-  Object.keys(req.query).forEach((key) => {
-    if (typeof req.query[key] === "string") {
-      req.query[key] = req.query[key].trim();
-    }
-  });
-
   next();
 };
 
@@ -37,8 +22,7 @@ const validateIncome = [
     .notEmpty()
     .withMessage("Title is required")
     .isLength({ max: 255 })
-    .withMessage("Title must not exceed 255 characters")
-    .escape(),
+    .withMessage("Title must not exceed 255 characters"),
   body("amount")
     .notEmpty()
     .withMessage("Amount is required")
@@ -49,22 +33,19 @@ const validateIncome = [
     .notEmpty()
     .withMessage("Source is required")
     .isLength({ max: 255 })
-    .withMessage("Source must not exceed 255 characters")
-    .escape(),
+    .withMessage("Source must not exceed 255 characters"),
   body("category")
     .trim()
     .notEmpty()
     .withMessage("Category is required")
     .isLength({ max: 255 })
-    .withMessage("Category must not exceed 255 characters")
-    .escape(),
+    .withMessage("Category must not exceed 255 characters"),
   body("date").optional().isISO8601().withMessage("Date must be a valid date"),
   body("note")
     .optional()
     .trim()
     .isLength({ max: 500 })
-    .withMessage("Note must not exceed 500 characters")
-    .escape(),
+    .withMessage("Note must not exceed 500 characters"),
   body("icon")
     .optional()
     .trim()
@@ -79,8 +60,7 @@ const validateExpense = [
     .notEmpty()
     .withMessage("Title is required")
     .isLength({ max: 255 })
-    .withMessage("Title must not exceed 255 characters")
-    .escape(),
+    .withMessage("Title must not exceed 255 characters"),
   body("amount")
     .notEmpty()
     .withMessage("Amount is required")
@@ -91,15 +71,13 @@ const validateExpense = [
     .notEmpty()
     .withMessage("Category is required")
     .isLength({ max: 255 })
-    .withMessage("Category must not exceed 255 characters")
-    .escape(),
+    .withMessage("Category must not exceed 255 characters"),
   body("date").optional().isISO8601().withMessage("Date must be a valid date"),
   body("description")
     .optional()
     .trim()
     .isLength({ max: 500 })
-    .withMessage("Description must not exceed 500 characters")
-    .escape(),
+    .withMessage("Description must not exceed 500 characters"),
   body("icon")
     .optional()
     .trim()
@@ -114,8 +92,7 @@ const validateBudget = [
     .notEmpty()
     .withMessage("Category is required")
     .isLength({ max: 255 })
-    .withMessage("Category must not exceed 255 characters")
-    .escape(),
+    .withMessage("Category must not exceed 255 characters"),
   body("amount")
     .notEmpty()
     .withMessage("Amount is required")
@@ -156,8 +133,7 @@ const validateGoal = [
     .notEmpty()
     .withMessage("Goal title is required")
     .isLength({ max: 255 })
-    .withMessage("Title must not exceed 255 characters")
-    .escape(),
+    .withMessage("Title must not exceed 255 characters"),
   body("targetAmount")
     .notEmpty()
     .withMessage("Target amount is required")
@@ -187,8 +163,7 @@ const validateContribution = [
     .optional()
     .trim()
     .isLength({ max: 200 })
-    .withMessage("Note must not exceed 200 characters")
-    .escape(),
+    .withMessage("Note must not exceed 200 characters"),
 ];
 
 // validate send signup otp
@@ -202,15 +177,14 @@ const validateSendSignupOtp = [
     .normalizeEmail(),
 ];
 
-// validate verify signup otp & register
+// validate verify signup otp & account creation
 const validateVerifySignupOtp = [
   body("fullName")
     .trim()
     .notEmpty()
     .withMessage("Full name is required")
     .isLength({ min: 2, max: 255 })
-    .withMessage("Full name must be between 2 and 255 characters")
-    .escape(),
+    .withMessage("Full name must be between 2 and 255 characters"),
   body("email")
     .trim()
     .notEmpty()
@@ -236,50 +210,6 @@ const validateVerifySignupOtp = [
     .trim()
     .notEmpty()
     .withMessage("Verification code is required")
-    .isLength({ min: 6, max: 6 })
-    .withMessage("Verification code must be 6 digits")
-    .isNumeric()
-    .withMessage("Verification code must contain digits only"),
-  body("profileImageUrl")
-    .optional()
-    .trim()
-    .isURL()
-    .withMessage("Profile image URL must be a valid URL"),
-];
-
-// validate registration
-const validateRegister = [
-  body("fullName")
-    .trim()
-    .notEmpty()
-    .withMessage("Full name is required")
-    .isLength({ min: 2, max: 255 })
-    .withMessage("Full name must be between 2 and 255 characters")
-    .escape(),
-  body("email")
-    .trim()
-    .notEmpty()
-    .withMessage("Email is required")
-    .isEmail()
-    .withMessage("Must be a valid email")
-    .normalizeEmail(),
-  body("password")
-    .notEmpty()
-    .withMessage("Password is required")
-    .isLength({ min: 8 })
-    .withMessage("Password must be at least 8 characters"),
-  body("confirmPassword")
-    .notEmpty()
-    .withMessage("Confirm password is required")
-    .custom((value, { req }) => {
-      if (value !== req.body.password) {
-        throw new Error("Password confirmation does not match password");
-      }
-      return true;
-    }),
-  body("otp")
-    .optional()
-    .trim()
     .isLength({ min: 6, max: 6 })
     .withMessage("Verification code must be 6 digits")
     .isNumeric()
@@ -352,7 +282,9 @@ const validateResetPassword = [
     .notEmpty()
     .withMessage("OTP is required")
     .isLength({ min: 6, max: 6 })
-    .withMessage("OTP must be 6 digits"),
+    .withMessage("OTP must be 6 digits")
+    .isNumeric()
+    .withMessage("OTP must contain digits only"),
   body("password")
     .notEmpty()
     .withMessage("Password is required")
@@ -366,8 +298,7 @@ const validateUpdateUser = [
     .optional()
     .trim()
     .isLength({ min: 2, max: 255 })
-    .withMessage("Full name must be between 2 and 255 characters")
-    .escape(),
+    .withMessage("Full name must be between 2 and 255 characters"),
   body("email")
     .optional()
     .trim()
@@ -388,7 +319,6 @@ const validateMongoId = [
 
 module.exports = {
   handleValidationErrors,
-  sanitizeMongoParams,
   validateIncome,
   validateExpense,
   validateBudget,
@@ -396,7 +326,6 @@ module.exports = {
   validateContribution,
   validateSendSignupOtp,
   validateVerifySignupOtp,
-  validateRegister,
   validateLogin,
   validateGoogleAuth,
   validateChangePassword,

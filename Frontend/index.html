@@ -8,6 +8,15 @@
       name="description"
       content="Track and manage your expenses and income with our intuitive and powerful expense tracker application. Gain insights into your financial habits and take control of your budget."
     />
+    <meta name="theme-color" content="#7c3aed" />
+    <script>
+      // Apply the saved theme before first paint so dark-mode users never see a white flash.
+      try {
+        var saved = localStorage.getItem("theme");
+        var dark = saved ? saved === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+        if (dark) document.documentElement.classList.add("dark");
+      } catch (e) {}
+    </script>
     <title>MoneyMint - Your Personal Finance Manager</title>
   </head>
   <body>

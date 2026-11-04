@@ -1,18 +1,14 @@
 const multer = require("multer");
-let storage = multer.memoryStorage();
+const AppError = require("../utils/AppError");
 
-let upload = multer({
-  storage: storage,
+const ALLOWED_FORMATS = ["image/jpeg", "image/png", "image/jpg"];
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024, files: 1 }, // the upload route is public, so cap memory use
   fileFilter: (req, file, cb) => {
-    let allowedFormats = ["image/jpeg", "image/png", "image/jpg"];
-    if (allowedFormats.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(
-        new Error("Invalid file format. Only JPEG, PNG, and JPG are allowed."),
-        false,
-      );
-    }
+    if (ALLOWED_FORMATS.includes(file.mimetype)) return cb(null, true);
+    cb(new AppError("Invalid file format. Only JPEG, PNG, and JPG are allowed.", 400), false);
   },
 });
 

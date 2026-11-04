@@ -2,7 +2,10 @@ import axios from "axios";
 import { BASE_URL } from "./apiPath";
 import { clearCache } from "./apiCache";
 
-let axiosInstance = axios.create({
+// A 401 from these means "wrong credentials", not "your session expired".
+const CREDENTIAL_ENDPOINTS = ["/auth/login", "/auth/google", "/auth/change-password"];
+
+const axiosInstance = axios.create({
   baseURL: BASE_URL,
   timeout: 60000,
   headers: {
@@ -10,41 +13,32 @@ let axiosInstance = axios.create({
   },
 });
 
-// adding token to request
-axiosInstance.interceptors.request.use(
-  (config) => {
-    let token = localStorage.getItem("token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error),
-);
+axiosInstance.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
 
-// handling responses
 axiosInstance.interceptors.response.use(
   (response) => {
-    let method = response.config.method?.toUpperCase();
-    if (method === "POST" || method === "PUT" || method === "DELETE") {
+    // any write invalidates the cached reads
+    if (["POST", "PUT", "DELETE"].includes(response.config.method?.toUpperCase())) {
       clearCache();
     }
     return response;
   },
   (error) => {
-    if (error.response) {
-      if (
-        error.response.status === 401 &&
-        !error.config?.url?.includes("/auth/login") &&
-        window.location.pathname !== "/login"
-      ) {
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-      } else if (error.response.status === 500) {
-        console.error("Server error. Please try again later.");
-      }
-    } else if (error.code === "ECONNABORTED") {
-      console.error("Request timeout. Please try again.");
+    const url = error.config?.url || "";
+    const sessionExpired =
+      error.response?.status === 401 &&
+      !CREDENTIAL_ENDPOINTS.some((path) => url.includes(path)) &&
+      window.location.pathname !== "/login";
+
+    if (sessionExpired) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      clearCache();
+      window.location.href = "/login";
     }
     return Promise.reject(error);
   },

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useMemo, memo } from "react";
+import { useState, useEffect, useMemo, memo } from "react";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -12,7 +12,7 @@ import { Bar } from "react-chartjs-2";
 import { LuChevronLeft, LuChevronRight, LuCalendar } from "react-icons/lu";
 import axiosInstance from "../../utils/axiosInstance";
 import { API_PATHS } from "../../utils/apiPath";
-import { ThemeContext } from "../../context/ThemeContext";
+import { useTheme } from "../../hooks/useTheme";
 import { getCachedData, setCachedData } from "../../utils/apiCache";
 import { addThousandsSeparator } from "../../utils/helper";
 
@@ -26,7 +26,7 @@ ChartJS.register(
 );
 
 const FinanceOverview = ({ initialYear }) => {
-  const { theme } = useContext(ThemeContext);
+  const { theme } = useTheme();
   const isDark = theme === "dark";
 
   const [year, setYear] = useState(
@@ -35,11 +35,12 @@ const FinanceOverview = ({ initialYear }) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (initialYear && initialYear !== year) {
-      setYear(initialYear);
-    }
-  }, [initialYear]);
+  // follow the dashboard's month when its year changes (adjusted during render, no effect needed)
+  const [seenInitialYear, setSeenInitialYear] = useState(initialYear);
+  if (initialYear !== seenInitialYear) {
+    setSeenInitialYear(initialYear);
+    if (initialYear) setYear(initialYear);
+  }
 
   useEffect(() => {
     let isMounted = true;

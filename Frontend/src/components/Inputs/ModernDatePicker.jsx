@@ -1,6 +1,4 @@
-"use client";
-
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import ReactDOM from "react-dom";
 import {
   LuCalendar,
@@ -37,10 +35,7 @@ const ModernDatePicker = ({
   onChange,
   error,
   label = "Date",
-  showRequired = true,
-  colorTheme = "purple",
   className = "",
-  inputClassName = "",
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0, width: 320 });
@@ -157,37 +152,9 @@ const ModernDatePicker = ({
     };
   }, [isOpen, updateCoords]);
 
-  // Color theme definitions
   const theme = {
-    purple: {
-      glow: "shadow-[0_0_15px_rgba(139,92,246,0.3)]",
-      accent: "text-purple-600 dark:text-purple-400",
-      bgAccent: "bg-purple-600 hover:bg-purple-700 text-white shadow-md shadow-purple-500/25",
-      ring: "focus:ring-purple-400/50",
-      hover: "hover:bg-purple-50 dark:hover:bg-purple-900/30",
-      today: "border-purple-600 text-purple-600 dark:border-purple-400 dark:text-purple-300 font-bold",
-    },
-    green: {
-      glow: "shadow-[0_0_15px_rgba(34,197,94,0.3)]",
-      accent: "text-green-600 dark:text-green-400",
-      bgAccent: "bg-green-600 hover:bg-green-700 text-white shadow-md shadow-green-500/25",
-      ring: "focus:ring-green-400/50",
-      hover: "hover:bg-green-50 dark:hover:bg-green-900/30",
-      today: "border-green-600 text-green-600 dark:border-green-400 dark:text-green-300 font-bold",
-    },
-    red: {
-      glow: "shadow-[0_0_15px_rgba(239,68,68,0.3)]",
-      accent: "text-red-600 dark:text-red-400",
-      bgAccent: "bg-red-600 hover:bg-red-700 text-white shadow-md shadow-red-500/25",
-      ring: "focus:ring-red-400/50",
-      hover: "hover:bg-red-50 dark:hover:bg-red-900/30",
-      today: "border-red-600 text-red-600 dark:border-red-400 dark:text-red-300 font-bold",
-    },
-  }[colorTheme] || {
-    glow: "shadow-[0_0_15px_rgba(139,92,246,0.3)]",
     accent: "text-purple-600 dark:text-purple-400",
     bgAccent: "bg-purple-600 hover:bg-purple-700 text-white shadow-md shadow-purple-500/25",
-    ring: "focus:ring-purple-400/50",
     hover: "hover:bg-purple-50 dark:hover:bg-purple-900/30",
     today: "border-purple-600 text-purple-600 dark:border-purple-400 dark:text-purple-300 font-bold",
   };
@@ -250,44 +217,23 @@ const ModernDatePicker = ({
   const weekDays = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
   return (
-    <div className={`${label ? "space-y-1.5" : ""} ${className}`}>
+    <div className={className}>
       {label ? (
-        <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300">
-          {React.isValidElement(label) ? (
-            label
-          ) : (
-            <span>{label}</span>
-          )}
-          {showRequired && <span className={theme.accent}>*</span>}
-        </label>
+        <span className="field-label block">{label}</span>
       ) : null}
 
-      {/* Input container */}
       <div className="relative" ref={triggerRef}>
-        <LuCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 pointer-events-none" />
-
-        <input
-          readOnly
-          value={formatDisplayDate(value)}
-          onClick={() => {
-            setIsOpen((prev) => !prev);
-          }}
-          className={`
-            w-full pl-10 pr-4 py-2.5 rounded-xl
-            bg-gray-100 dark:bg-gray-800
-            border border-gray-300 dark:border-gray-700
-            text-gray-900 dark:text-white
-            placeholder-gray-400 dark:placeholder-gray-500
-            cursor-pointer transition-all
-            focus:outline-none focus:ring-2
-            ${theme.ring}
-            ${isOpen ? theme.glow : ""}
-            ${error ? "border-red-400 ring-red-300/40" : ""}
-            ${inputClassName}
-          `}
-        />
-
-        {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+        <button
+          type="button"
+          onClick={() => setIsOpen((prev) => !prev)}
+          aria-haspopup="dialog"
+          aria-expanded={isOpen}
+          className={`input-box !justify-start text-left cursor-pointer ${isOpen ? "!border-purple-600" : ""} ${error ? "!border-red-400" : ""}`}
+        >
+          <LuCalendar className="text-gray-400 shrink-0 self-center" aria-hidden="true" />
+          <span>{formatDisplayDate(value)}</span>
+        </button>
+        {error && <p className="field-error">{error}</p>}
       </div>
 
       {/* Calendar Popup Portaled to document.body to avoid clipping */}

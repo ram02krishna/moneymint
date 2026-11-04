@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useContext } from "react";
+import { useState, useEffect } from "react";
 import axiosInstance from "../../utils/axiosInstance";
 import { API_PATHS } from "../../utils/apiPath";
 import { addThousandsSeparator } from "../../utils/helper";
-import { ThemeContext } from "../../context/ThemeContext";
+import { useTheme } from "../../hooks/useTheme";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -16,7 +16,7 @@ import {
   Filler,
 } from "chart.js";
 import { Line, Bar } from "react-chartjs-2";
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { LuTrendingUp, LuTrendingDown } from "react-icons/lu";
 
 ChartJS.register(
   CategoryScale,
@@ -31,7 +31,7 @@ ChartJS.register(
 );
 
 const MonthlyTrendAnalysis = ({ selectedMonth }) => {
-  const { theme } = useContext(ThemeContext);
+  const { theme } = useTheme();
   const isDark = theme === "dark";
   const [trendData, setTrendData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -374,9 +374,9 @@ const MonthlyTrendAnalysis = ({ selectedMonth }) => {
   return (
     <div className="space-y-6">
       {/* Comparison Metrics */}
-      <div className="flex md:grid md:grid-cols-2 lg:grid-cols-5 gap-4 overflow-x-auto md:overflow-x-visible pb-4 md:pb-0 no-scrollbar snap-x snap-mandatory">
+      <div className="stat-grid sm:grid-cols-2 lg:grid-cols-5">
         {/* Average Income */}
-        <div className="card p-4 flex flex-col justify-between w-[75vw] md:w-auto shrink-0 snap-center">
+        <div className="card p-4 flex flex-col justify-between">
           <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider">
             Avg. Monthly Income
           </p>
@@ -386,7 +386,7 @@ const MonthlyTrendAnalysis = ({ selectedMonth }) => {
         </div>
 
         {/* Average Expense */}
-        <div className="card p-4 flex flex-col justify-between w-[75vw] md:w-auto shrink-0 snap-center">
+        <div className="card p-4 flex flex-col justify-between">
           <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider">
             Avg. Monthly Expense
           </p>
@@ -396,7 +396,7 @@ const MonthlyTrendAnalysis = ({ selectedMonth }) => {
         </div>
 
         {/* Average Savings */}
-        <div className="card p-4 flex flex-col justify-between w-[75vw] md:w-auto shrink-0 snap-center">
+        <div className="card p-4 flex flex-col justify-between">
           <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider">
             Avg. Monthly Savings
           </p>
@@ -406,7 +406,7 @@ const MonthlyTrendAnalysis = ({ selectedMonth }) => {
         </div>
 
         {/* Highest Spend Month */}
-        <div className="card p-4 flex flex-col justify-between w-[75vw] md:w-auto shrink-0 snap-center">
+        <div className="card p-4 flex flex-col justify-between">
           <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider">
             Highest Spend
           </p>
@@ -416,7 +416,7 @@ const MonthlyTrendAnalysis = ({ selectedMonth }) => {
         </div>
 
         {/* Highest Income Month */}
-        <div className="card p-4 flex flex-col justify-between w-[75vw] md:w-auto shrink-0 snap-center">
+        <div className="card p-4 flex flex-col justify-between">
           <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider">
             Highest Income
           </p>
@@ -428,9 +428,9 @@ const MonthlyTrendAnalysis = ({ selectedMonth }) => {
 
       {/* Month-over-Month Comparison */}
       {currentMonthData && previousMonthData && (
-        <div className="flex md:grid md:grid-cols-3 gap-4 overflow-x-auto md:overflow-x-visible pb-4 md:pb-0 no-scrollbar snap-x snap-mandatory">
+        <div className="stat-grid sm:grid-cols-3">
           {/* Income Change */}
-          <div className="card p-5 w-[80vw] md:w-auto shrink-0 snap-center">
+          <div className="card p-5">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
@@ -448,12 +448,12 @@ const MonthlyTrendAnalysis = ({ selectedMonth }) => {
                 }`}
               >
                 {incomeChange.change >= 0 ? (
-                  <TrendingUp
+                  <LuTrendingUp
                     size={18}
                     className="text-green-600 dark:text-green-400"
                   />
                 ) : (
-                  <TrendingDown
+                  <LuTrendingDown
                     size={18}
                     className="text-red-600 dark:text-red-400"
                   />
@@ -473,7 +473,7 @@ const MonthlyTrendAnalysis = ({ selectedMonth }) => {
           </div>
 
           {/* Expense Change */}
-          <div className="card p-5 w-[80vw] md:w-auto shrink-0 snap-center">
+          <div className="card p-5">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
@@ -491,12 +491,12 @@ const MonthlyTrendAnalysis = ({ selectedMonth }) => {
                 }`}
               >
                 {expenseChange.change <= 0 ? (
-                  <TrendingDown
+                  <LuTrendingDown
                     size={18}
                     className="text-green-600 dark:text-green-400"
                   />
                 ) : (
-                  <TrendingUp
+                  <LuTrendingUp
                     size={18}
                     className="text-red-600 dark:text-red-400"
                   />
@@ -516,7 +516,7 @@ const MonthlyTrendAnalysis = ({ selectedMonth }) => {
           </div>
 
           {/* Savings Change */}
-          <div className="card p-5 w-[80vw] md:w-auto shrink-0 snap-center">
+          <div className="card p-5">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
@@ -539,12 +539,12 @@ const MonthlyTrendAnalysis = ({ selectedMonth }) => {
                 }`}
               >
                 {currentMonthData.savings - previousMonthData.savings >= 0 ? (
-                  <TrendingUp
+                  <LuTrendingUp
                     size={18}
                     className="text-green-600 dark:text-green-400"
                   />
                 ) : (
-                  <TrendingDown
+                  <LuTrendingDown
                     size={18}
                     className="text-red-600 dark:text-red-400"
                   />

@@ -1,9 +1,8 @@
-export let BASE_URL = import.meta.env.VITE_BASE_URL || "http://localhost:5000";
+export const BASE_URL = import.meta.env.VITE_BASE_URL || "http://localhost:5000";
 // my api paths
-export let API_PATHS = {
+export const API_PATHS = {
   AUTH: {
     LOGIN: "/api/v1/auth/login",
-    REGISTER: "/api/v1/auth/register",
     SEND_SIGNUP_OTP: "/api/v1/auth/send-signup-otp",
     RESEND_SIGNUP_OTP: "/api/v1/auth/resend-signup-otp",
     VERIFY_SIGNUP_OTP: "/api/v1/auth/verify-signup-otp",
@@ -19,25 +18,22 @@ export let API_PATHS = {
     GET_MONTHLY_SUMMARY: "/api/v1/dashboard/monthly-summary",
     GET_MONTHLY_EXPENSES: "/api/v1/dashboard/monthly-expenses",
     GET_MONTHLY_INCOME: "/api/v1/dashboard/monthly-income",
-    GET_EXPENSE_SUMMARY: "/api/v1/dashboard/expense-summary-by-category",
     GET_TREND_SUMMARY: "/api/v1/dashboard/trend-summary",
   },
   INCOME: {
     ADD_INCOME: "/api/v1/income",
-    GET_ALL_INCOME: "/api/v1/income",
+    UPDATE_INCOME: (incomeId) => `/api/v1/income/${incomeId}`,
     DELETE_INCOME: (incomeId) => `/api/v1/income/${incomeId}`,
     DOWNLOAD_INCOME: `/api/v1/income/download-excel`,
   },
   EXPENSE: {
     ADD_EXPENSE: "/api/v1/expense",
-    GET_ALL_EXPENSE: "/api/v1/expense",
+    UPDATE_EXPENSE: (expenseId) => `/api/v1/expense/${expenseId}`,
     DELETE_EXPENSE: (expenseId) => `/api/v1/expense/${expenseId}`,
     DOWNLOAD_EXPENSE: `/api/v1/expense/download-excel`,
   },
   BUDGET: {
     ADD_BUDGET: "/api/v1/budgets",
-    GET_ALL_BUDGETS: "/api/v1/budgets",
-    GET_BUDGET: (budgetId) => `/api/v1/budgets/${budgetId}`,
     UPDATE_BUDGET: (budgetId) => `/api/v1/budgets/${budgetId}`,
     DELETE_BUDGET: (budgetId) => `/api/v1/budgets/${budgetId}`,
     GET_REPORT: "/api/v1/budgets/report/actual-vs-budget",
@@ -77,14 +73,12 @@ export let API_PATHS = {
     EXPENSES: {
       GET_ALL: "/api/v1/split/expenses",
       CREATE: "/api/v1/split/expenses",
-      GET_ONE: (id) => `/api/v1/split/expenses/${id}`,
       UPDATE: (id) => `/api/v1/split/expenses/${id}`,
       DELETE: (id) => `/api/v1/split/expenses/${id}`,
     },
     SETTLEMENTS: {
       GET_ALL: "/api/v1/split/settlements",
       CREATE: "/api/v1/split/settlements",
-      DELETE: (id) => `/api/v1/split/settlements/${id}`,
     },
     ACTIVITY: "/api/v1/split/activity",
     ANALYTICS: "/api/v1/split/analytics",

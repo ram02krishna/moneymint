@@ -1,15 +1,3 @@
-import { addThousandsSeparator, emojiFor } from "./helper";
-
-export { emojiFor };
-
-export const formatCurrency = (amt) => {
-  if (amt == null || isNaN(amt)) return "₹0.00";
-  const num = Number(amt);
-  const formatted = addThousandsSeparator(Math.abs(num));
-  if (num < 0) return `-₹${formatted}`;
-  return `₹${formatted}`;
-};
-
 export const CATEGORIES = [
   { id: "Food & Dining", name: "Food & Dining", icon: "🍔" },
   { id: "Transportation", name: "Transportation", icon: "🚕" },

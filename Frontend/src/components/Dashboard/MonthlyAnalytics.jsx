@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import { addThousandsSeparator, CHART_COLORS } from "../../utils/helper";
 import ChartJsPieChart from "../Charts/ChartJsPieChart";
 

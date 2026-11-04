@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useContext } from "react";
+import { useState, useEffect, useMemo, useContext } from "react";
 import {
   LuReceipt,
   LuPlus,
@@ -11,12 +11,8 @@ import {
 import Modal from "../layouts/Modal";
 import ModernDatePicker from "../Inputs/ModernDatePicker";
 import { UserContext } from "../../context/UserContextDefinition";
-import {
-  CATEGORIES,
-  SPLIT_METHODS,
-  previewShares,
-  formatCurrency,
-} from "../../utils/splitHelper";
+import { CATEGORIES, SPLIT_METHODS, previewShares } from "../../utils/splitHelper";
+import { formatCurrency } from "../../utils/helper";
 
 const AddSplitExpenseModal = ({
   isOpen,
@@ -446,6 +442,7 @@ const AddSplitExpenseModal = ({
     const participantsList = activeParticipants.map((p) => {
       const preview = previewedShares.find((ps) => ps.key === p.key);
       return {
+        key: p.key, // lets the server match itemized assignments to this person
         user: p.user || null,
         name: p.name.replace(" (You)", ""),
         email: p.email || "",
@@ -587,8 +584,6 @@ const AddSplitExpenseModal = ({
               label={null}
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              colorTheme="purple"
-              inputClassName="py-2.5 h-11"
             />
           </div>
         </div>

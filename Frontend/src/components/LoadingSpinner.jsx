@@ -1,4 +1,3 @@
-import React from "react";
 
 let LoadingSpinner = ({
   fullScreen = false,

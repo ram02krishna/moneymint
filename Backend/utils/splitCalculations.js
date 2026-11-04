@@ -136,73 +136,70 @@ const calculateShares = ({
       result[maxIdx].shareAmount = fromCents(currentCents + diff);
     }
   } else if (splitMethod === "itemized") {
-    // Participant identifier helper
-    const getParticipantKey = (p) =>
-      p.user ? String(p.user) : p.name.trim().toLowerCase();
-
-    const subtotalMap = {};
-    participants.forEach((p) => {
-      subtotalMap[getParticipantKey(p)] = 0;
+    // An item can point at a participant by user id, by the client's key, or by name.
+    const aliasToIndex = {};
+    participants.forEach((p, i) => {
+      [p.user && String(p.user), p.key && String(p.key), p.name && p.name.trim().toLowerCase()]
+        .filter(Boolean)
+        .forEach((alias) => {
+          aliasToIndex[alias] = i;
+        });
     });
+    const resolve = (target) => {
+      const raw = String(target);
+      return aliasToIndex[raw] ?? aliasToIndex[raw.trim().toLowerCase()];
+    };
 
-    // Sum line items per assigned participant
+    const subtotals = new Array(n).fill(0);
+
     (itemDetails || []).forEach((item) => {
       const priceCents = toCents(item.price);
-      const assigned = item.assignedTo || [];
-      if (assigned.length === 0) return;
+      const assigned = [...new Set((item.assignedTo || []).map(resolve))];
 
-      const baseCents = Math.floor(priceCents / assigned.length);
-      let remainder = priceCents - baseCents * assigned.length;
+      if ((item.assignedTo || []).some((t) => resolve(t) === undefined)) {
+        throw new Error(`"${item.name || "An item"}" is assigned to someone who is not part of this expense`);
+      }
+      if (priceCents > 0 && assigned.length === 0) {
+        throw new Error(`Assign "${item.name || "every item"}" to at least one person`);
+      }
 
-      assigned.forEach((target) => {
-        let amt = baseCents;
-        if (remainder > 0) {
-          amt += 1;
-          remainder -= 1;
-        }
-        if (subtotalMap[target] !== undefined) {
-          subtotalMap[target] += amt;
-        }
+      const baseCents = assigned.length ? Math.floor(priceCents / assigned.length) : 0;
+      let remainder = assigned.length ? priceCents - baseCents * assigned.length : 0;
+
+      assigned.forEach((idx) => {
+        subtotals[idx] += baseCents + (remainder > 0 ? 1 : 0);
+        if (remainder > 0) remainder -= 1;
       });
     });
 
-    const totalSubtotalCents = Object.values(subtotalMap).reduce(
-      (a, b) => a + b,
-      0,
-    );
-    const taxCents = toCents(tax);
-    const tipCents = toCents(tip);
-    const extraCents = taxCents + tipCents;
+    const totalSubtotalCents = subtotals.reduce((a, b) => a + b, 0);
+    const extraCents = toCents(tax) + toCents(tip);
 
     let allocatedCents = 0;
     let maxIdx = 0;
-    let maxSubtotal = -1;
 
     for (let i = 0; i < n; i++) {
-      const key = getParticipantKey(participants[i]);
-      const userSubtotalCents = subtotalMap[key] || 0;
-      if (userSubtotalCents > maxSubtotal) {
-        maxSubtotal = userSubtotalCents;
-        maxIdx = i;
-      }
+      if (subtotals[i] > subtotals[maxIdx]) maxIdx = i;
 
-      let extraShareCents = 0;
-      if (totalSubtotalCents > 0 && extraCents > 0) {
-        extraShareCents = Math.round(
-          (userSubtotalCents / totalSubtotalCents) * extraCents,
-        );
-      }
+      const extraShareCents =
+        totalSubtotalCents > 0 && extraCents > 0
+          ? Math.round((subtotals[i] / totalSubtotalCents) * extraCents)
+          : 0;
 
-      const totalUserCents = userSubtotalCents + extraShareCents;
+      const totalUserCents = subtotals[i] + extraShareCents;
       allocatedCents += totalUserCents;
       result[i].shareAmount = fromCents(totalUserCents);
     }
 
-    // Reconcile any 1-cent rounding difference with total amount
+    // Only rounding pennies may be reconciled. A bigger gap means the amount, items, tax and tip disagree.
     const diff = totalCents - allocatedCents;
+    if (Math.abs(diff) > n) {
+      throw new Error(
+        `Items, tax and tip add up to ₹${fromCents(allocatedCents)} but the total is ₹${fromCents(totalCents)}`,
+      );
+    }
     if (diff !== 0) {
-      const currentCents = toCents(result[maxIdx].shareAmount);
-      result[maxIdx].shareAmount = fromCents(currentCents + diff);
+      result[maxIdx].shareAmount = fromCents(toCents(result[maxIdx].shareAmount) + diff);
     }
   }
 

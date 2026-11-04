@@ -3,7 +3,6 @@ const { Protect } = require("../middleware/authMiddleware");
 const {
   sendSignupOtp,
   verifySignupOtp,
-  registerUser,
   loginUser,
   googleAuth,
   getUserInfo,
@@ -18,7 +17,6 @@ const {
   handleValidationErrors,
   validateSendSignupOtp,
   validateVerifySignupOtp,
-  validateRegister,
   validateLogin,
   validateGoogleAuth,
   validateChangePassword,
@@ -46,14 +44,6 @@ router.post(
   validateVerifySignupOtp,
   handleValidationErrors,
   verifySignupOtp,
-);
-
-// register route (requires OTP verification)
-router.post(
-  "/register",
-  validateRegister,
-  handleValidationErrors,
-  registerUser,
 );
 
 // login route

@@ -7,6 +7,8 @@ const User = require("../models/User");
 const asyncHandler = require("../utils/asyncHandler");
 const AppError = require("../utils/AppError");
 const { validateObjectId } = require("../utils/queryValidator");
+const { parsePagination } = require("../utils/pagination");
+const { searchRegex } = require("../utils/escapeRegex");
 const {
   round2,
   toCents,
@@ -17,289 +19,157 @@ const {
   simplifyDebts,
   calculateDetailedDebts,
 } = require("../utils/splitCalculations");
+const {
+  sameParty,
+  isGroupMember,
+  canAccessExpense,
+  canAccessSettlement,
+  pairwiseBalance,
+} = require("../utils/splitAccess");
 
 /**
- * Helper: Find all groups where the user is a member or creator
+ * The signed-in person as { id, email, user } (email lowercased).
  */
-const getUserGroups = async (userId, userEmail) => {
-  return await Group.find({
-    $or: [
-      { creator: userId },
-      { "members.user": userId },
-      ...(userEmail ? [{ "members.email": userEmail.toLowerCase() }] : []),
-    ],
-    isArchived: false,
-  }).lean();
+const loadMe = async (userId) => {
+  const user = await User.findById(userId).lean();
+  if (!user) throw new AppError("User not found", 404);
+  return { id: String(user._id), email: user.email?.toLowerCase(), user };
 };
 
-/**
- * Helper: Fetch all expenses involving the user (either directly or via user's groups)
- */
-const getUserExpenses = async (userId, userEmail) => {
-  const groups = await getUserGroups(userId, userEmail);
-  const groupIds = groups.map((g) => g._id);
+const memberOfGroup = (userId, userEmail) => ({
+  $or: [
+    { creator: userId },
+    { "members.user": userId },
+    ...(userEmail ? [{ "members.email": userEmail }] : []),
+  ],
+});
 
-  return await SplitExpense.find({
-    $or: [
-      { createdBy: userId },
-      { "paidBy.user": userId },
-      { "participants.user": userId },
-      ...(userEmail
-        ? [
-            { "paidBy.email": userEmail.toLowerCase() },
-            { "participants.email": userEmail.toLowerCase() },
-          ]
-        : []),
-      { group: { $in: groupIds } },
+// Groups the user belongs to that are still active
+const getUserGroups = (userId, userEmail) =>
+  Group.find({ ...memberOfGroup(userId, userEmail), isArchived: false }).lean();
+
+/**
+ * Mongo filter for "everything this user is involved in": things they created, are named on,
+ * or that belong to one of their groups. Deleted (archived) groups are excluded so their
+ * leftover expenses can't keep inflating balances nobody can see or settle any more.
+ */
+const userScopeFilter = async (partyFields, userId, userEmail) => {
+  const [groups, archived] = await Promise.all([
+    getUserGroups(userId, userEmail),
+    Group.find({ ...memberOfGroup(userId, userEmail), isArchived: true }).select("_id").lean(),
+  ]);
+
+  return {
+    $and: [
+      {
+        $or: [
+          { createdBy: userId },
+          ...partyFields.map((field) => ({ [`${field}.user`]: userId })),
+          ...(userEmail ? partyFields.map((field) => ({ [`${field}.email`]: userEmail })) : []),
+          { group: { $in: groups.map((g) => g._id) } },
+        ],
+      },
+      { group: { $nin: archived.map((g) => g._id) } },
     ],
-  })
+  };
+};
+
+const getUserExpenses = async (userId, userEmail) =>
+  SplitExpense.find(await userScopeFilter(["paidBy", "participants"], userId, userEmail))
     .sort({ date: -1, createdAt: -1 })
     .lean();
-};
 
-/**
- * Helper: Fetch all settlements involving the user
- */
-const getUserSettlements = async (userId, userEmail) => {
-  const groups = await getUserGroups(userId, userEmail);
-  const groupIds = groups.map((g) => g._id);
-
-  return await Settlement.find({
-    $or: [
-      { createdBy: userId },
-      { "payer.user": userId },
-      { "payee.user": userId },
-      ...(userEmail
-        ? [
-            { "payer.email": userEmail.toLowerCase() },
-            { "payee.email": userEmail.toLowerCase() },
-          ]
-        : []),
-      { group: { $in: groupIds } },
-    ],
-  })
+const getUserSettlements = async (userId, userEmail) =>
+  Settlement.find(await userScopeFilter(["payer", "payee"], userId, userEmail))
     .sort({ date: -1, createdAt: -1 })
     .lean();
+
+// Loads a group and makes sure the caller belongs to it.
+const requireGroupMember = async (groupId, me, { lean = false } = {}) => {
+  const query = Group.findById(validateObjectId(groupId, "Group ID"));
+  const group = await (lean ? query.lean() : query);
+  if (!group || group.isArchived) throw new AppError("Group not found", 404);
+  if (!isGroupMember(group, me)) throw new AppError("You do not have access to this group", 403);
+  return group;
 };
+
+// A member needs a display name even when only an email is known.
+const displayName = (name, email) => (name && String(name).trim()) || (email ? email.split("@")[0] : "");
 
 // ==========================================
 // 1. DASHBOARD OVERVIEW
 // ==========================================
+/**
+ * Adds the caller's balance and totals to a group (shared by the dashboard and the group list).
+ */
+const enrichGroup = (grp, allExpenses, allSettlements, me) => {
+  const sameGroup = (item) => item.group && String(item.group) === String(grp._id);
+  const grpExpenses = allExpenses.filter(sameGroup);
+  const grpSettlements = allSettlements.filter(sameGroup);
+
+  const { netBalances } = calculateNetBalances({
+    members: grp.members,
+    expenses: grpExpenses,
+    settlements: grpSettlements,
+  });
+
+  const memberEntry = grp.members.find((m) => sameParty(m, me));
+  const userBalance = memberEntry ? netBalances[personId(memberEntry)] || 0 : 0;
+  const totalSpent = grpExpenses.reduce((acc, exp) => acc + (exp.amount || 0), 0);
+
+  return {
+    ...grp,
+    userBalance: round2(userBalance),
+    totalSpent: round2(totalSpent),
+    expensesCount: grpExpenses.length,
+  };
+};
+
+const friendRef = (friend) => ({
+  id: friend.friendUser ? idString(friend.friendUser) : null,
+  email: friend.email ? friend.email.toLowerCase() : null,
+  name: friend.name || null,
+});
+
+const idString = (ref) => String(ref._id || ref);
+
 exports.getSplitDashboard = asyncHandler(async (req, res) => {
-  const userId = req.user.id;
-  const currentUser = await User.findById(userId).lean();
-  if (!currentUser) throw new AppError("User not found", 404);
+  const me = await loadMe(req.user.id);
 
-  const userEmail = currentUser.email?.toLowerCase();
-  const uIdStr = String(userId);
-
-  // Fetch groups, friends, expenses, settlements
   const [groups, friends, allExpenses, allSettlements] = await Promise.all([
-    getUserGroups(userId, userEmail),
-    Friend.find({ user: userId }).lean(),
-    getUserExpenses(userId, userEmail),
-    getUserSettlements(userId, userEmail),
+    getUserGroups(me.id, me.email),
+    Friend.find({ user: me.id }).lean(),
+    getUserExpenses(me.id, me.email),
+    getUserSettlements(me.id, me.email),
   ]);
 
-  // Compute overall net balances across all shared expenses & settlements
-  let totalPaidCents = 0;
-  let totalShareCents = 0;
-  let totalSettlementReceivedCents = 0;
-  let totalSettlementPaidCents = 0;
-
+  // Overall net balance: (paid - consumed) + (settlements paid - settlements received)
+  let netBalanceCents = 0;
   allExpenses.forEach((exp) => {
     (exp.paidBy || []).forEach((p) => {
-      if (
-        (p.user && String(p.user) === uIdStr) ||
-        (userEmail && p.email && p.email.toLowerCase() === userEmail)
-      ) {
-        totalPaidCents += toCents(p.amount);
-      }
+      if (sameParty(p, me)) netBalanceCents += toCents(p.amount);
     });
-
     (exp.participants || []).forEach((p) => {
-      if (
-        (p.user && String(p.user) === uIdStr) ||
-        (userEmail && p.email && p.email.toLowerCase() === userEmail)
-      ) {
-        totalShareCents += toCents(p.shareAmount);
-      }
+      if (sameParty(p, me)) netBalanceCents -= toCents(p.shareAmount);
     });
   });
-
   allSettlements.forEach((s) => {
-    if (
-      (s.payee.user && String(s.payee.user) === uIdStr) ||
-      (userEmail && s.payee.email && s.payee.email.toLowerCase() === userEmail)
-    ) {
-      totalSettlementReceivedCents += toCents(s.amount);
-    }
-    if (
-      (s.payer.user && String(s.payer.user) === uIdStr) ||
-      (userEmail && s.payer.email && s.payer.email.toLowerCase() === userEmail)
-    ) {
-      totalSettlementPaidCents += toCents(s.amount);
-    }
+    if (sameParty(s.payer, me)) netBalanceCents += toCents(s.amount);
+    if (sameParty(s.payee, me)) netBalanceCents -= toCents(s.amount);
   });
 
-  // Net balance for user = (totalPaid - totalShare) + (totalSettlementPaid - totalSettlementReceived)
-  const netBalanceCents =
-    totalPaidCents -
-    totalShareCents +
-    totalSettlementPaidCents -
-    totalSettlementReceivedCents;
+  const enrichedGroups = groups.map((grp) => enrichGroup(grp, allExpenses, allSettlements, me));
 
-  // Compute breakdown for each group
-  const enrichedGroups = groups.map((grp) => {
-    const grpExpenses = allExpenses.filter(
-      (e) => e.group && String(e.group) === String(grp._id),
-    );
-    const grpSettlements = allSettlements.filter(
-      (s) => s.group && String(s.group) === String(grp._id),
-    );
+  const enrichedFriends = friends.map((fr) => ({
+    ...fr,
+    balance: pairwiseBalance({ expenses: allExpenses, settlements: allSettlements, me, friend: friendRef(fr) }),
+  }));
 
-    const { netBalances } = calculateNetBalances({
-      members: grp.members,
-      expenses: grpExpenses,
-      settlements: grpSettlements,
-    });
-
-    // Find user's member ID or match by user/email
-    let userBalance = 0;
-    const memberEntry = grp.members.find(
-      (m) =>
-        (m.user && String(m.user) === uIdStr) ||
-        (userEmail && m.email && m.email.toLowerCase() === userEmail),
-    );
-
-    if (memberEntry) {
-      const mId = personId(memberEntry);
-      userBalance = netBalances[mId] || 0;
-    }
-
-    const totalGroupSpent = grpExpenses.reduce(
-      (acc, exp) => acc + (exp.amount || 0),
-      0,
-    );
-
-    return {
-      ...grp,
-      userBalance: round2(userBalance),
-      totalSpent: round2(totalGroupSpent),
-      expenseCount: grpExpenses.length,
-    };
-  });
-
-  // Compute breakdown for each friend (pairwise balance)
-  const enrichedFriends = friends.map((fr) => {
-    const frUserId = fr.friendUser ? String(fr.friendUser) : null;
-    const frEmail = fr.email ? fr.email.toLowerCase() : null;
-
-    let balanceCents = 0;
-
-    allExpenses.forEach((exp) => {
-      // Did current user pay for friend?
-      const userPaidAmt = (exp.paidBy || [])
-        .filter(
-          (p) =>
-            (p.user && String(p.user) === uIdStr) ||
-            (userEmail && p.email && p.email.toLowerCase() === userEmail),
-        )
-        .reduce((sum, p) => sum + toCents(p.amount), 0);
-
-      const friendPaidAmt = (exp.paidBy || [])
-        .filter(
-          (p) =>
-            (frUserId && p.user && String(p.user) === frUserId) ||
-            (frEmail && p.email && p.email.toLowerCase() === frEmail),
-        )
-        .reduce((sum, p) => sum + toCents(p.amount), 0);
-
-      const userShare = (exp.participants || [])
-        .filter(
-          (p) =>
-            (p.user && String(p.user) === uIdStr) ||
-            (userEmail && p.email && p.email.toLowerCase() === userEmail),
-        )
-        .reduce((sum, p) => sum + toCents(p.shareAmount), 0);
-
-      const friendShare = (exp.participants || [])
-        .filter(
-          (p) =>
-            (frUserId && p.user && String(p.user) === frUserId) ||
-            (frEmail && p.email && p.email.toLowerCase() === frEmail),
-        )
-        .reduce((sum, p) => sum + toCents(p.shareAmount), 0);
-
-      // If user paid and friend participated
-      if (userPaidAmt > 0 && friendShare > 0) {
-        // Proportion of user's payment that covers friend's share
-        const expTotalCents = toCents(exp.amount);
-        if (expTotalCents > 0) {
-          const ratio = userPaidAmt / expTotalCents;
-          balanceCents += Math.round(friendShare * ratio);
-        }
-      }
-
-      // If friend paid and user participated
-      if (friendPaidAmt > 0 && userShare > 0) {
-        const expTotalCents = toCents(exp.amount);
-        if (expTotalCents > 0) {
-          const ratio = friendPaidAmt / expTotalCents;
-          balanceCents -= Math.round(userShare * ratio);
-        }
-      }
-    });
-
-    // Settlements between user and this friend
-    allSettlements.forEach((s) => {
-      const isUserPayer =
-        (s.payer.user && String(s.payer.user) === uIdStr) ||
-        (userEmail && s.payer.email && s.payer.email.toLowerCase() === userEmail);
-      const isFriendPayee =
-        (frUserId && s.payee.user && String(s.payee.user) === frUserId) ||
-        (frEmail && s.payee.email && s.payee.email.toLowerCase() === frEmail);
-
-      const isFriendPayer =
-        (frUserId && s.payer.user && String(s.payer.user) === frUserId) ||
-        (frEmail && s.payer.email && s.payer.email.toLowerCase() === frEmail);
-      const isUserPayee =
-        (s.payee.user && String(s.payee.user) === uIdStr) ||
-        (userEmail && s.payee.email && s.payee.email.toLowerCase() === userEmail);
-
-      if (isUserPayer && isFriendPayee) {
-        balanceCents += toCents(s.amount);
-      }
-      if (isFriendPayer && isUserPayee) {
-        balanceCents -= toCents(s.amount);
-      }
-    });
-
-    return {
-      ...fr,
-      balance: fromCents(balanceCents),
-    };
-  });
-
-  // Calculate total money user owes vs is owed
   let youOweCents = 0;
   let youAreOwedCents = 0;
-
   enrichedFriends.forEach((fr) => {
-    if (fr.balance > 0) {
-      youAreOwedCents += toCents(fr.balance);
-    } else if (fr.balance < 0) {
-      youOweCents += toCents(-fr.balance);
-    }
-  });
-
-  // Also include group simplified debts for current user
-  enrichedGroups.forEach((grp) => {
-    if (grp.userBalance > 0) {
-      // covered in overall stats
-    } else if (grp.userBalance < 0) {
-      // covered
-    }
+    if (fr.balance > 0) youAreOwedCents += toCents(fr.balance);
+    else if (fr.balance < 0) youOweCents += toCents(-fr.balance);
   });
 
   res.status(200).json({
@@ -326,14 +196,14 @@ exports.getSplitDashboard = asyncHandler(async (req, res) => {
 // ==========================================
 exports.createGroup = asyncHandler(async (req, res) => {
   const userId = req.user.id;
-  const currentUser = await User.findById(userId).lean();
-  if (!currentUser) throw new AppError("User not found", 404);
+  const { user: currentUser } = await loadMe(userId);
 
   const { name, description, category, icon, members = [], simplifyDebts } = req.body;
 
-  if (!name || !name.trim()) {
+  if (typeof name !== "string" || !name.trim()) {
     throw new AppError("Group name is required", 400);
   }
+  if (!Array.isArray(members)) throw new AppError("Members must be a list", 400);
 
   // Creator is always the first member & admin
   const formattedMembers = [
@@ -368,7 +238,7 @@ exports.createGroup = asyncHandler(async (req, res) => {
 
     formattedMembers.push({
       user: matchedUser ? matchedUser._id : null,
-      name: matchedUser ? matchedUser.fullName : m.name.trim(),
+      name: matchedUser ? matchedUser.fullName : displayName(m.name, email),
       email: email,
       role: "member",
       joinedAt: new Date(),
@@ -401,11 +271,9 @@ exports.createGroup = asyncHandler(async (req, res) => {
 });
 
 exports.getGroups = asyncHandler(async (req, res) => {
-  const userId = req.user.id;
-  const currentUser = await User.findById(userId).lean();
-  const userEmail = currentUser?.email?.toLowerCase();
+  const me = await loadMe(req.user.id);
 
-  const groups = await getUserGroups(userId, userEmail);
+  const groups = await getUserGroups(me.id, me.email);
   const groupIds = groups.map((g) => g._id);
 
   const [allExpenses, allSettlements] = await Promise.all([
@@ -413,46 +281,7 @@ exports.getGroups = asyncHandler(async (req, res) => {
     Settlement.find({ group: { $in: groupIds } }).lean(),
   ]);
 
-  const uIdStr = String(userId);
-
-  const enriched = groups.map((grp) => {
-    const grpExpenses = allExpenses.filter(
-      (e) => String(e.group) === String(grp._id),
-    );
-    const grpSettlements = allSettlements.filter(
-      (s) => String(s.group) === String(grp._id),
-    );
-
-    const { netBalances } = calculateNetBalances({
-      members: grp.members,
-      expenses: grpExpenses,
-      settlements: grpSettlements,
-    });
-
-    const memberEntry = grp.members.find(
-      (m) =>
-        (m.user && String(m.user) === uIdStr) ||
-        (userEmail && m.email && m.email.toLowerCase() === userEmail),
-    );
-
-    let userBalance = 0;
-    if (memberEntry) {
-      const mId = personId(memberEntry);
-      userBalance = netBalances[mId] || 0;
-    }
-
-    const totalSpent = grpExpenses.reduce(
-      (sum, e) => sum + (e.amount || 0),
-      0,
-    );
-
-    return {
-      ...grp,
-      userBalance: round2(userBalance),
-      totalSpent: round2(totalSpent),
-      expensesCount: grpExpenses.length,
-    };
-  });
+  const enriched = groups.map((grp) => enrichGroup(grp, allExpenses, allSettlements, me));
 
   res.status(200).json({
     status: "success",
@@ -462,40 +291,19 @@ exports.getGroups = asyncHandler(async (req, res) => {
 });
 
 exports.getGroupById = asyncHandler(async (req, res) => {
+  const me = await loadMe(req.user.id);
   const groupId = validateObjectId(req.params.id, "Group ID");
-  const userId = req.user.id;
-  const currentUser = await User.findById(userId).lean();
-  const userEmail = currentUser?.email?.toLowerCase();
 
   const group = await Group.findById(groupId)
     .populate("creator", "fullName email profileImageUrl")
     .lean();
 
-  if (!group || group.isArchived) {
-    throw new AppError("Group not found", 404);
-  }
-
-  // Check if caller is member
-  const uIdStr = String(userId);
-  const isMember =
-    String(group.creator._id || group.creator) === uIdStr ||
-    group.members.some(
-      (m) =>
-        (m.user && String(m.user) === uIdStr) ||
-        (userEmail && m.email && m.email.toLowerCase() === userEmail),
-    );
-
-  if (!isMember) {
-    throw new AppError("You do not have access to this group", 403);
-  }
+  if (!group || group.isArchived) throw new AppError("Group not found", 404);
+  if (!isGroupMember(group, me)) throw new AppError("You do not have access to this group", 403);
 
   const [expenses, settlements] = await Promise.all([
-    SplitExpense.find({ group: groupId })
-      .sort({ date: -1, createdAt: -1 })
-      .lean(),
-    Settlement.find({ group: groupId })
-      .sort({ date: -1, createdAt: -1 })
-      .lean(),
+    SplitExpense.find({ group: groupId }).sort({ date: -1, createdAt: -1 }).lean(),
+    Settlement.find({ group: groupId }).sort({ date: -1, createdAt: -1 }).lean(),
   ]);
 
   const { netBalances, memberMap } = calculateNetBalances({
@@ -504,16 +312,12 @@ exports.getGroupById = asyncHandler(async (req, res) => {
     settlements,
   });
 
-  // Calculate simplified debts
   const simplifiedDebts = simplifyDebts(netBalances, memberMap);
-  // Calculate detailed debts
   const detailedDebts = calculateDetailedDebts(expenses, settlements, memberMap);
 
   // Enrich members with their individual balance and spending stats
   const enrichedMembers = group.members.map((m) => {
     const mId = personId(m);
-    const balance = netBalances[mId] || 0;
-
     let totalPaid = 0;
     let totalShare = 0;
 
@@ -528,20 +332,14 @@ exports.getGroupById = asyncHandler(async (req, res) => {
 
     return {
       ...m,
-      balance: round2(balance),
+      balance: round2(netBalances[mId] || 0),
       totalPaid: round2(totalPaid),
       totalShare: round2(totalShare),
     };
   });
 
   const totalSpent = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-
-  // Find user's balance in this group
-  const userMember = group.members.find(
-    (m) =>
-      (m.user && String(m.user) === uIdStr) ||
-      (userEmail && m.email && m.email.toLowerCase() === userEmail),
-  );
+  const userMember = group.members.find((m) => sameParty(m, me));
   const userBalance = userMember ? netBalances[personId(userMember)] || 0 : 0;
 
   res.status(200).json({
@@ -571,16 +369,14 @@ exports.updateGroup = asyncHandler(async (req, res) => {
   // Check admin rights (creator or role admin)
   const isAuthorized =
     String(group.creator) === String(userId) ||
-    group.members.some(
-      (m) => String(m.user) === String(userId) && m.role === "admin",
-    );
+    group.members.some((m) => m.user && String(m.user) === String(userId) && m.role === "admin");
   if (!isAuthorized) {
     throw new AppError("Only group admins can update group details", 403);
   }
 
   const { name, description, category, icon, simplifyDebts } = req.body;
-  if (name) group.name = name.trim();
-  if (description !== undefined) group.description = description.trim();
+  if (typeof name === "string" && name.trim()) group.name = name.trim();
+  if (typeof description === "string") group.description = description.trim();
   if (category) group.category = category;
   if (icon) group.icon = icon;
   if (simplifyDebts !== undefined) group.simplifyDebts = !!simplifyDebts;
@@ -631,22 +427,21 @@ exports.deleteGroup = asyncHandler(async (req, res) => {
 });
 
 exports.addGroupMember = asyncHandler(async (req, res) => {
-  const groupId = validateObjectId(req.params.id, "Group ID");
-  const userId = req.user.id;
+  const me = await loadMe(req.user.id);
   const { name, email, userId: memberUserId } = req.body;
 
   if (!name && !email) {
     throw new AppError("Member name or email is required", 400);
   }
 
-  const group = await Group.findById(groupId);
-  if (!group || group.isArchived) throw new AppError("Group not found", 404);
+  // only people already in the group may add others
+  const group = await requireGroupMember(req.params.id, me);
 
+  const cleanEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
   let targetUser = null;
-  const cleanEmail = email ? email.trim().toLowerCase() : "";
 
   if (memberUserId) {
-    targetUser = await User.findById(memberUserId).lean();
+    targetUser = await User.findById(validateObjectId(memberUserId, "User ID")).lean();
   } else if (cleanEmail) {
     targetUser = await User.findOne({ email: cleanEmail }).lean();
   }
@@ -656,12 +451,11 @@ exports.addGroupMember = asyncHandler(async (req, res) => {
       (targetUser && m.user && String(m.user) === String(targetUser._id)) ||
       (cleanEmail && m.email && m.email.toLowerCase() === cleanEmail),
   );
-
   if (alreadyMember) {
     throw new AppError("User is already a member of this group", 400);
   }
 
-  const memberName = targetUser ? targetUser.fullName : name.trim();
+  const memberName = targetUser ? targetUser.fullName : displayName(name, cleanEmail);
   group.members.push({
     user: targetUser ? targetUser._id : null,
     name: memberName,
@@ -674,33 +468,37 @@ exports.addGroupMember = asyncHandler(async (req, res) => {
 
   await SplitActivity.create({
     group: group._id,
-    user: userId,
+    user: me.id,
     type: "member_added",
     title: "Added member",
     description: `Added "${memberName}" to the group`,
   });
 
-  res.status(200).json({
-    status: "success",
-    data: { group },
-  });
+  res.status(200).json({ status: "success", data: { group } });
 });
 
 exports.removeGroupMember = asyncHandler(async (req, res) => {
-  const groupId = validateObjectId(req.params.id, "Group ID");
-  const memberId = req.params.memberId;
-  const userId = req.user.id;
+  const me = await loadMe(req.user.id);
+  const group = await requireGroupMember(req.params.id, me);
 
-  const group = await Group.findById(groupId);
-  if (!group || group.isArchived) throw new AppError("Group not found", 404);
-
-  const targetMember = group.members.id(memberId);
+  const targetMember = group.members.id(req.params.memberId);
   if (!targetMember) throw new AppError("Member not found in group", 404);
+
+  // admins/creator can remove anyone; everyone else can only remove themselves
+  const isAdmin =
+    String(group.creator) === me.id ||
+    group.members.some((m) => sameParty(m, me) && m.role === "admin");
+  if (!isAdmin && !sameParty(targetMember, me)) {
+    throw new AppError("Only group admins can remove other members", 403);
+  }
+  if (targetMember.user && String(targetMember.user) === String(group.creator)) {
+    throw new AppError("The group creator cannot be removed", 400);
+  }
 
   // Check if member has unsettled balance in group
   const [expenses, settlements] = await Promise.all([
-    SplitExpense.find({ group: groupId }).lean(),
-    Settlement.find({ group: groupId }).lean(),
+    SplitExpense.find({ group: group._id }).lean(),
+    Settlement.find({ group: group._id }).lean(),
   ]);
 
   const { netBalances } = calculateNetBalances({
@@ -718,126 +516,38 @@ exports.removeGroupMember = asyncHandler(async (req, res) => {
   }
 
   const memberName = targetMember.name;
-  group.members.pull({ _id: memberId });
+  group.members.pull({ _id: targetMember._id });
   await group.save();
 
   await SplitActivity.create({
     group: group._id,
-    user: userId,
+    user: me.id,
     type: "member_removed",
     title: "Removed member",
     description: `Removed "${memberName}" from the group`,
   });
 
-  res.status(200).json({
-    status: "success",
-    data: { group },
-  });
+  res.status(200).json({ status: "success", data: { group } });
 });
 
 // ==========================================
 // 3. FRIENDS MANAGEMENT
 // ==========================================
 exports.getFriends = asyncHandler(async (req, res) => {
-  const userId = req.user.id;
-  const currentUser = await User.findById(userId).lean();
-  const userEmail = currentUser?.email?.toLowerCase();
-  const uIdStr = String(userId);
+  const me = await loadMe(req.user.id);
 
   const [friends, allExpenses, allSettlements] = await Promise.all([
-    Friend.find({ user: userId })
-      .populate("friendUser", "fullName email profileImageUrl")
-      .lean(),
-    getUserExpenses(userId, userEmail),
-    getUserSettlements(userId, userEmail),
+    Friend.find({ user: me.id }).populate("friendUser", "fullName email profileImageUrl").lean(),
+    getUserExpenses(me.id, me.email),
+    getUserSettlements(me.id, me.email),
   ]);
 
-  const enriched = friends.map((fr) => {
-    const frUserId = fr.friendUser ? String(fr.friendUser._id || fr.friendUser) : null;
-    const frEmail = fr.email ? fr.email.toLowerCase() : null;
+  const enriched = friends.map((fr) => ({
+    ...fr,
+    balance: pairwiseBalance({ expenses: allExpenses, settlements: allSettlements, me, friend: friendRef(fr) }),
+  }));
 
-    let balanceCents = 0;
-
-    allExpenses.forEach((exp) => {
-      const userPaidAmt = (exp.paidBy || [])
-        .filter(
-          (p) =>
-            (p.user && String(p.user) === uIdStr) ||
-            (userEmail && p.email && p.email.toLowerCase() === userEmail),
-        )
-        .reduce((sum, p) => sum + toCents(p.amount), 0);
-
-      const friendPaidAmt = (exp.paidBy || [])
-        .filter(
-          (p) =>
-            (frUserId && p.user && String(p.user) === frUserId) ||
-            (frEmail && p.email && p.email.toLowerCase() === frEmail),
-        )
-        .reduce((sum, p) => sum + toCents(p.amount), 0);
-
-      const userShare = (exp.participants || [])
-        .filter(
-          (p) =>
-            (p.user && String(p.user) === uIdStr) ||
-            (userEmail && p.email && p.email.toLowerCase() === userEmail),
-        )
-        .reduce((sum, p) => sum + toCents(p.shareAmount), 0);
-
-      const friendShare = (exp.participants || [])
-        .filter(
-          (p) =>
-            (frUserId && p.user && String(p.user) === frUserId) ||
-            (frEmail && p.email && p.email.toLowerCase() === frEmail),
-        )
-        .reduce((sum, p) => sum + toCents(p.shareAmount), 0);
-
-      if (userPaidAmt > 0 && friendShare > 0) {
-        const expTotalCents = toCents(exp.amount);
-        if (expTotalCents > 0) {
-          const ratio = userPaidAmt / expTotalCents;
-          balanceCents += Math.round(friendShare * ratio);
-        }
-      }
-
-      if (friendPaidAmt > 0 && userShare > 0) {
-        const expTotalCents = toCents(exp.amount);
-        if (expTotalCents > 0) {
-          const ratio = friendPaidAmt / expTotalCents;
-          balanceCents -= Math.round(userShare * ratio);
-        }
-      }
-    });
-
-    allSettlements.forEach((s) => {
-      const isUserPayer =
-        (s.payer.user && String(s.payer.user) === uIdStr) ||
-        (userEmail && s.payer.email && s.payer.email.toLowerCase() === userEmail);
-      const isFriendPayee =
-        (frUserId && s.payee.user && String(s.payee.user) === frUserId) ||
-        (frEmail && s.payee.email && s.payee.email.toLowerCase() === frEmail);
-
-      const isFriendPayer =
-        (frUserId && s.payer.user && String(s.payer.user) === frUserId) ||
-        (frEmail && s.payer.email && s.payer.email.toLowerCase() === frEmail);
-      const isUserPayee =
-        (s.payee.user && String(s.payee.user) === uIdStr) ||
-        (userEmail && s.payee.email && s.payee.email.toLowerCase() === userEmail);
-
-      if (isUserPayer && isFriendPayee) balanceCents += toCents(s.amount);
-      if (isFriendPayer && isUserPayee) balanceCents -= toCents(s.amount);
-    });
-
-    return {
-      ...fr,
-      balance: fromCents(balanceCents),
-    };
-  });
-
-  res.status(200).json({
-    status: "success",
-    results: enriched.length,
-    data: { friends: enriched },
-  });
+  res.status(200).json({ status: "success", results: enriched.length, data: { friends: enriched } });
 });
 
 exports.addFriend = asyncHandler(async (req, res) => {
@@ -848,11 +558,11 @@ exports.addFriend = asyncHandler(async (req, res) => {
     throw new AppError("Friend name or email is required", 400);
   }
 
-  const cleanEmail = email ? email.trim().toLowerCase() : "";
+  const cleanEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
   let matchedUser = null;
 
   if (friendUserId) {
-    matchedUser = await User.findById(friendUserId).lean();
+    matchedUser = await User.findById(validateObjectId(friendUserId, "User ID")).lean();
   } else if (cleanEmail) {
     matchedUser = await User.findOne({ email: cleanEmail }).lean();
   }
@@ -874,14 +584,14 @@ exports.addFriend = asyncHandler(async (req, res) => {
     throw new AppError("This friend has already been added", 400);
   }
 
-  const friendName = matchedUser ? matchedUser.fullName : name.trim();
+  const friendName = matchedUser ? matchedUser.fullName : displayName(name, cleanEmail);
 
   const newFriend = await Friend.create({
     user: userId,
     friendUser: matchedUser ? matchedUser._id : null,
     name: friendName,
     email: cleanEmail,
-    phone: phone ? phone.trim() : "",
+    phone: typeof phone === "string" ? phone.trim() : "",
     status: "accepted",
     invitedBy: userId,
   });
@@ -919,14 +629,14 @@ exports.addFriend = asyncHandler(async (req, res) => {
 });
 
 exports.searchUsers = asyncHandler(async (req, res) => {
-  const query = req.query.q ? req.query.q.trim() : "";
+  const query = typeof req.query.q === "string" ? req.query.q.trim() : "";
   const userId = req.user.id;
 
   if (!query || query.length < 2) {
     return res.status(200).json({ status: "success", data: { users: [] } });
   }
 
-  const safeRegex = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+  const safeRegex = searchRegex(query);
 
   const users = await User.find({
     _id: { $ne: userId },
@@ -944,153 +654,43 @@ exports.searchUsers = asyncHandler(async (req, res) => {
 
 exports.getFriendDetail = asyncHandler(async (req, res) => {
   const friendId = validateObjectId(req.params.id, "Friend ID");
-  const userId = req.user.id;
-  const currentUser = await User.findById(userId).lean();
-  const userEmail = currentUser?.email?.toLowerCase();
-  const uIdStr = String(userId);
+  const me = await loadMe(req.user.id);
 
-  const friend = await Friend.findOne({ _id: friendId, user: userId })
+  const friend = await Friend.findOne({ _id: friendId, user: me.id })
     .populate("friendUser", "fullName email profileImageUrl")
     .lean();
-
   if (!friend) throw new AppError("Friend not found", 404);
 
-  const frUserId = friend.friendUser
-    ? String(friend.friendUser._id || friend.friendUser)
-    : null;
-  const frEmail = friend.email ? friend.email.toLowerCase() : null;
+  const ref = friendRef(friend);
+  const friendName = friend.name ? friend.name.trim().toLowerCase() : null;
 
-  // Fetch all shared expenses between current user and friend
-  const allExpenses = await getUserExpenses(userId, userEmail);
-  const allSettlements = await getUserSettlements(userId, userEmail);
+  const [allExpenses, allSettlements] = await Promise.all([
+    getUserExpenses(me.id, me.email),
+    getUserSettlements(me.id, me.email),
+  ]);
 
-  // Filter expenses where both user and friend are involved
-  const sharedExpenses = allExpenses.filter((exp) => {
-    const hasUser =
-      (exp.paidBy || []).some(
-        (p) =>
-          (p.user && String(p.user) === uIdStr) ||
-          (userEmail && p.email && p.email.toLowerCase() === userEmail),
-      ) ||
-      (exp.participants || []).some(
-        (p) =>
-          (p.user && String(p.user) === uIdStr) ||
-          (userEmail && p.email && p.email.toLowerCase() === userEmail),
-      );
+  // Contacts that were never invited have no id/email to match on, so fall back to their name
+  const isFriend = (p) => sameParty(p, ref) || (friendName && p.name && p.name.trim().toLowerCase() === friendName);
+  const involves = (parties, test) => (parties || []).some(test);
 
-    const hasFriend =
-      (exp.paidBy || []).some(
-        (p) =>
-          (frUserId && p.user && String(p.user) === frUserId) ||
-          (frEmail && p.email && p.email.toLowerCase() === frEmail) ||
-          (friend.name && p.name && p.name.trim().toLowerCase() === friend.name.trim().toLowerCase()),
-      ) ||
-      (exp.participants || []).some(
-        (p) =>
-          (frUserId && p.user && String(p.user) === frUserId) ||
-          (frEmail && p.email && p.email.toLowerCase() === frEmail) ||
-          (friend.name && p.name && p.name.trim().toLowerCase() === friend.name.trim().toLowerCase()),
-      );
+  const sharedExpenses = allExpenses.filter(
+    (exp) =>
+      (involves(exp.paidBy, (p) => sameParty(p, me)) || involves(exp.participants, (p) => sameParty(p, me))) &&
+      (involves(exp.paidBy, isFriend) || involves(exp.participants, isFriend)),
+  );
 
-    return hasUser && hasFriend;
-  });
-
-  // Filter settlements between both
-  const sharedSettlements = allSettlements.filter((s) => {
-    const isUserPayer =
-      (s.payer.user && String(s.payer.user) === uIdStr) ||
-      (userEmail && s.payer.email && s.payer.email.toLowerCase() === userEmail);
-    const isFriendPayee =
-      (frUserId && s.payee.user && String(s.payee.user) === frUserId) ||
-      (frEmail && s.payee.email && s.payee.email.toLowerCase() === frEmail);
-
-    const isFriendPayer =
-      (frUserId && s.payer.user && String(s.payer.user) === frUserId) ||
-      (frEmail && s.payer.email && s.payer.email.toLowerCase() === frEmail);
-    const isUserPayee =
-      (s.payee.user && String(s.payee.user) === uIdStr) ||
-      (userEmail && s.payee.email && s.payee.email.toLowerCase() === userEmail);
-
-    return (isUserPayer && isFriendPayee) || (isFriendPayer && isUserPayee);
-  });
-
-  // Calculate net balance
-  let balanceCents = 0;
-  sharedExpenses.forEach((exp) => {
-    const userPaidAmt = (exp.paidBy || [])
-      .filter(
-        (p) =>
-          (p.user && String(p.user) === uIdStr) ||
-          (userEmail && p.email && p.email.toLowerCase() === userEmail),
-      )
-      .reduce((sum, p) => sum + toCents(p.amount), 0);
-
-    const friendPaidAmt = (exp.paidBy || [])
-      .filter(
-        (p) =>
-          (frUserId && p.user && String(p.user) === frUserId) ||
-          (frEmail && p.email && p.email.toLowerCase() === frEmail),
-      )
-      .reduce((sum, p) => sum + toCents(p.amount), 0);
-
-    const userShare = (exp.participants || [])
-      .filter(
-        (p) =>
-          (p.user && String(p.user) === uIdStr) ||
-          (userEmail && p.email && p.email.toLowerCase() === userEmail),
-      )
-      .reduce((sum, p) => sum + toCents(p.shareAmount), 0);
-
-    const friendShare = (exp.participants || [])
-      .filter(
-        (p) =>
-          (frUserId && p.user && String(p.user) === frUserId) ||
-          (frEmail && p.email && p.email.toLowerCase() === frEmail),
-      )
-      .reduce((sum, p) => sum + toCents(p.shareAmount), 0);
-
-    if (userPaidAmt > 0 && friendShare > 0) {
-      const expTotalCents = toCents(exp.amount);
-      if (expTotalCents > 0) {
-        const ratio = userPaidAmt / expTotalCents;
-        balanceCents += Math.round(friendShare * ratio);
-      }
-    }
-
-    if (friendPaidAmt > 0 && userShare > 0) {
-      const expTotalCents = toCents(exp.amount);
-      if (expTotalCents > 0) {
-        const ratio = friendPaidAmt / expTotalCents;
-        balanceCents -= Math.round(userShare * ratio);
-      }
-    }
-  });
-
-  sharedSettlements.forEach((s) => {
-    const isUserPayer =
-      (s.payer.user && String(s.payer.user) === uIdStr) ||
-      (userEmail && s.payer.email && s.payer.email.toLowerCase() === userEmail);
-    const isFriendPayee =
-      (frUserId && s.payee.user && String(s.payee.user) === frUserId) ||
-      (frEmail && s.payee.email && s.payee.email.toLowerCase() === frEmail);
-
-    const isFriendPayer =
-      (frUserId && s.payer.user && String(s.payer.user) === frUserId) ||
-      (frEmail && s.payer.email && s.payer.email.toLowerCase() === frEmail);
-    const isUserPayee =
-      (s.payee.user && String(s.payee.user) === uIdStr) ||
-      (userEmail && s.payee.email && s.payee.email.toLowerCase() === userEmail);
-
-    if (isUserPayer && isFriendPayee) balanceCents += toCents(s.amount);
-    if (isFriendPayer && isUserPayee) balanceCents -= toCents(s.amount);
-  });
+  const sharedSettlements = allSettlements.filter(
+    (s) =>
+      (sameParty(s.payer, me) && sameParty(s.payee, ref)) ||
+      (sameParty(s.payer, ref) && sameParty(s.payee, me)),
+  );
 
   res.status(200).json({
     status: "success",
     data: {
       friend: {
         ...friend,
-        balance: fromCents(balanceCents),
+        balance: pairwiseBalance({ expenses: sharedExpenses, settlements: sharedSettlements, me, friend: ref }),
       },
       expenses: sharedExpenses,
       settlements: sharedSettlements,
@@ -1123,17 +723,51 @@ exports.deleteFriend = asyncHandler(async (req, res) => {
 // ==========================================
 // 4. SHARED EXPENSES
 // ==========================================
+const MAX_LIST_LIMIT = 100;
+
+const cleanParty = (p) => ({
+  user: p.user || null,
+  name: displayName(p.name, p.email),
+  email: typeof p.email === "string" ? p.email.toLowerCase() : "",
+});
+
+const buildPaidBy = (paidBy, totalAmount) => {
+  if (!Array.isArray(paidBy) || paidBy.length === 0) {
+    throw new AppError("At least one payer is required", 400);
+  }
+  const totalPaidCents = paidBy.reduce((sum, p) => sum + toCents(p.amount), 0);
+  if (totalPaidCents !== toCents(totalAmount)) {
+    throw new AppError(
+      `Total paid (₹${fromCents(totalPaidCents)}) must equal total expense amount (₹${round2(totalAmount)})`,
+      400,
+    );
+  }
+  return paidBy.map((p) => ({ ...cleanParty(p), amount: round2(p.amount) }));
+};
+
+const nonNegative = (value, label) => {
+  const n = Number(value || 0);
+  if (!Number.isFinite(n) || n < 0) throw new AppError(`${label} must be zero or more`, 400);
+  return n;
+};
+
+const sharesOrThrow = (args) => {
+  try {
+    return calculateShares(args);
+  } catch (err) {
+    throw new AppError(err.message, 400);
+  }
+};
+
 exports.createSplitExpense = asyncHandler(async (req, res) => {
-  const userId = req.user.id;
-  const currentUser = await User.findById(userId).lean();
-  if (!currentUser) throw new AppError("User not found", 404);
+  const me = await loadMe(req.user.id);
 
   const {
     title,
     amount,
     currency = "INR",
     category = "General",
-    date = new Date(),
+    date,
     group = null,
     paidBy = [],
     splitMethod = "equal",
@@ -1144,55 +778,34 @@ exports.createSplitExpense = asyncHandler(async (req, res) => {
     notes = "",
   } = req.body;
 
-  if (!title || !title.trim()) {
+  if (typeof title !== "string" || !title.trim()) {
     throw new AppError("Expense title is required", 400);
   }
 
   const numAmount = Number(amount);
-  if (isNaN(numAmount) || numAmount <= 0) {
+  if (!Number.isFinite(numAmount) || numAmount <= 0) {
     throw new AppError("Amount must be a positive number", 400);
   }
 
-  if (!Array.isArray(paidBy) || paidBy.length === 0) {
-    throw new AppError("At least one payer is required", 400);
-  }
-
-  // Validate total paid equals total expense amount
-  const totalPaidCents = paidBy.reduce((sum, p) => sum + toCents(p.amount), 0);
-  if (totalPaidCents !== toCents(numAmount)) {
-    throw new AppError(
-      `Total paid (₹${fromCents(totalPaidCents)}) must equal total expense amount (₹${round2(numAmount)})`,
-      400,
-    );
-  }
+  const payers = buildPaidBy(paidBy, numAmount);
 
   if (!Array.isArray(participants) || participants.length === 0) {
     throw new AppError("At least one participant is required", 400);
   }
 
-  // Calculate accurate participant shares
-  let calculatedParticipants;
-  try {
-    calculatedParticipants = calculateShares({
-      amount: numAmount,
-      splitMethod,
-      participants,
-      itemDetails,
-      tax,
-      tip,
-    });
-  } catch (err) {
-    throw new AppError(err.message, 400);
-  }
+  const taxAmount = nonNegative(tax, "Tax");
+  const tipAmount = nonNegative(tip, "Tip");
+  const calculatedParticipants = sharesOrThrow({
+    amount: numAmount,
+    splitMethod,
+    participants,
+    itemDetails,
+    tax: taxAmount,
+    tip: tipAmount,
+  });
 
-  // If group expense, verify group exists
-  let targetGroup = null;
-  if (group) {
-    targetGroup = await Group.findById(group);
-    if (!targetGroup || targetGroup.isArchived) {
-      throw new AppError("Group not found", 404);
-    }
-  }
+  // group expenses can only be added by people in that group
+  const targetGroup = group ? await requireGroupMember(group, me, { lean: true }) : null;
 
   const newExpense = await SplitExpense.create({
     title: title.trim(),
@@ -1200,89 +813,54 @@ exports.createSplitExpense = asyncHandler(async (req, res) => {
     currency,
     category,
     date: date ? new Date(date) : new Date(),
-    group: group || null,
-    paidBy: paidBy.map((p) => ({
-      user: p.user || null,
-      name: p.name,
-      email: p.email ? p.email.toLowerCase() : "",
-      amount: round2(p.amount),
-    })),
+    group: targetGroup ? targetGroup._id : null,
+    paidBy: payers,
     splitMethod,
     participants: calculatedParticipants,
     itemDetails: itemDetails || [],
-    tax: round2(tax),
-    tip: round2(tip),
-    notes: notes ? notes.trim() : "",
-    createdBy: userId,
+    tax: round2(taxAmount),
+    tip: round2(tipAmount),
+    notes: typeof notes === "string" ? notes.trim() : "",
+    createdBy: me.id,
   });
 
-  // Record activity
   await SplitActivity.create({
-    group: group || null,
-    user: userId,
+    group: newExpense.group,
+    user: me.id,
     type: "expense_added",
     title: "Added expense",
-    description: `Added "${newExpense.title}" for ₹${newExpense.amount}${
-      targetGroup ? ` in "${targetGroup.name}"` : ""
-    }`,
+    description: `Added "${newExpense.title}" for ₹${newExpense.amount}${targetGroup ? ` in "${targetGroup.name}"` : ""}`,
     amount: newExpense.amount,
     metadata: { expenseId: newExpense._id },
   });
 
-  res.status(201).json({
-    status: "success",
-    data: { expense: newExpense },
-  });
+  res.status(201).json({ status: "success", data: { expense: newExpense } });
 });
 
 exports.getSplitExpenses = asyncHandler(async (req, res) => {
-  const userId = req.user.id;
-  const currentUser = await User.findById(userId).lean();
-  const userEmail = currentUser?.email?.toLowerCase();
+  const me = await loadMe(req.user.id);
+  const { groupId, category, search } = req.query;
+  const { page, limit, skip } = parsePagination(req.query, { defaultLimit: 50, maxLimit: MAX_LIST_LIMIT });
 
-  const { groupId, category, search, page = 1, limit = 50 } = req.query;
-
-  const filter = {};
+  const clauses = [];
 
   if (groupId) {
-    filter.group = validateObjectId(groupId, "Group ID");
+    const group = await requireGroupMember(groupId, me, { lean: true });
+    clauses.push({ group: group._id });
   } else {
-    // Show all user's shared expenses
-    const groups = await getUserGroups(userId, userEmail);
-    const groupIds = groups.map((g) => g._id);
-
-    filter.$or = [
-      { createdBy: userId },
-      { "paidBy.user": userId },
-      { "participants.user": userId },
-      ...(userEmail
-        ? [
-            { "paidBy.email": userEmail },
-            { "participants.email": userEmail },
-          ]
-        : []),
-      { group: { $in: groupIds } },
-    ];
+    clauses.push(await userScopeFilter(["paidBy", "participants"], me.id, me.email));
   }
 
-  if (category && category !== "All") {
-    filter.category = category;
-  }
+  if (category && category !== "All") clauses.push({ category });
 
   if (search && search.trim()) {
-    const safeRegex = new RegExp(search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
-    filter.$and = filter.$and || [];
-    filter.$and.push({
-      $or: [
-        { title: safeRegex },
-        { notes: safeRegex },
-        { "paidBy.name": safeRegex },
-        { "participants.name": safeRegex },
-      ],
+    const pattern = searchRegex(search);
+    clauses.push({
+      $or: [{ title: pattern }, { notes: pattern }, { "paidBy.name": pattern }, { "participants.name": pattern }],
     });
   }
 
-  const skip = (Math.max(1, Number(page)) - 1) * Number(limit);
+  const filter = { $and: clauses };
 
   const [expenses, total] = await Promise.all([
     SplitExpense.find(filter)
@@ -1290,160 +868,121 @@ exports.getSplitExpenses = asyncHandler(async (req, res) => {
       .populate("createdBy", "fullName email")
       .sort({ date: -1, createdAt: -1 })
       .skip(skip)
-      .limit(Number(limit))
+      .limit(limit)
       .lean(),
     SplitExpense.countDocuments(filter),
   ]);
 
-  res.status(200).json({
-    status: "success",
-    results: expenses.length,
-    total,
-    page: Number(page),
-    data: { expenses },
-  });
+  res.status(200).json({ status: "success", results: expenses.length, total, page, data: { expenses } });
 });
 
-exports.getSplitExpenseById = asyncHandler(async (req, res) => {
-  const expenseId = validateObjectId(req.params.id, "Expense ID");
-  const expense = await SplitExpense.findById(expenseId)
-    .populate("group", "name category icon members")
-    .populate("createdBy", "fullName email")
-    .lean();
-
+// loads an expense and makes sure the caller is allowed to touch it
+const loadAccessibleExpense = async (expenseId, me) => {
+  const expense = await SplitExpense.findById(validateObjectId(expenseId, "Expense ID"));
   if (!expense) throw new AppError("Expense not found", 404);
 
-  res.status(200).json({
-    status: "success",
-    data: { expense },
-  });
-});
+  const group = expense.group ? await Group.findById(expense.group).lean() : null;
+  if (!canAccessExpense(expense, me, group)) {
+    throw new AppError("You do not have access to this expense", 403);
+  }
+  return expense;
+};
 
 exports.updateSplitExpense = asyncHandler(async (req, res) => {
-  const expenseId = validateObjectId(req.params.id, "Expense ID");
-  const userId = req.user.id;
+  const me = await loadMe(req.user.id);
+  const expense = await loadAccessibleExpense(req.params.id, me);
 
-  const expense = await SplitExpense.findById(expenseId);
-  if (!expense) throw new AppError("Expense not found", 404);
-
-  const {
-    title,
-    amount,
-    category,
-    date,
-    paidBy,
-    splitMethod,
-    participants,
-    itemDetails,
-    tax,
-    tip,
-    notes,
-  } = req.body;
+  const { title, amount, category, date, paidBy, splitMethod, participants, itemDetails, tax, tip, notes } = req.body;
 
   const numAmount = amount !== undefined ? Number(amount) : expense.amount;
-  const currentSplitMethod = splitMethod || expense.splitMethod;
-  const currentParticipants = participants || expense.participants;
-  const currentItemDetails = itemDetails !== undefined ? itemDetails : expense.itemDetails;
-  const currentTax = tax !== undefined ? Number(tax) : expense.tax;
-  const currentTip = tip !== undefined ? Number(tip) : expense.tip;
-
-  let calculatedParticipants;
-  try {
-    calculatedParticipants = calculateShares({
-      amount: numAmount,
-      splitMethod: currentSplitMethod,
-      participants: currentParticipants,
-      itemDetails: currentItemDetails,
-      tax: currentTax,
-      tip: currentTip,
-    });
-  } catch (err) {
-    throw new AppError(err.message, 400);
+  if (!Number.isFinite(numAmount) || numAmount <= 0) {
+    throw new AppError("Amount must be a positive number", 400);
   }
 
-  if (title) expense.title = title.trim();
+  const currentSplitMethod = splitMethod || expense.splitMethod;
+  const currentItemDetails = itemDetails !== undefined ? itemDetails : expense.itemDetails;
+  const currentTax = tax !== undefined ? nonNegative(tax, "Tax") : expense.tax;
+  const currentTip = tip !== undefined ? nonNegative(tip, "Tip") : expense.tip;
+
+  const calculatedParticipants = sharesOrThrow({
+    amount: numAmount,
+    splitMethod: currentSplitMethod,
+    participants: participants || expense.participants,
+    itemDetails: currentItemDetails,
+    tax: currentTax,
+    tip: currentTip,
+  });
+
+  // The payers must always add up to the amount, otherwise balances stop adding up to zero.
+  let nextPaidBy;
+  if (Array.isArray(paidBy) && paidBy.length > 0) {
+    nextPaidBy = buildPaidBy(paidBy, numAmount);
+  } else if (toCents(numAmount) === toCents(expense.amount)) {
+    nextPaidBy = expense.paidBy;
+  } else if (expense.paidBy.length === 1) {
+    nextPaidBy = [{ ...expense.paidBy[0].toObject(), amount: round2(numAmount) }];
+  } else {
+    throw new AppError("The amount changed, so please say how much each person paid", 400);
+  }
+
+  if (typeof title === "string" && title.trim()) expense.title = title.trim();
   expense.amount = round2(numAmount);
   if (category) expense.category = category;
   if (date) expense.date = new Date(date);
-  if (paidBy && Array.isArray(paidBy) && paidBy.length > 0) {
-    const totalPaid = paidBy.reduce((sum, p) => sum + toCents(p.amount), 0);
-    if (totalPaid !== toCents(numAmount)) {
-      throw new AppError("Total paid must equal total expense amount", 400);
-    }
-    expense.paidBy = paidBy.map((p) => ({
-      user: p.user || null,
-      name: p.name,
-      email: p.email ? p.email.toLowerCase() : "",
-      amount: round2(p.amount),
-    }));
-  }
+  expense.paidBy = nextPaidBy;
   expense.splitMethod = currentSplitMethod;
   expense.participants = calculatedParticipants;
   expense.itemDetails = currentItemDetails;
   expense.tax = round2(currentTax);
   expense.tip = round2(currentTip);
-  if (notes !== undefined) expense.notes = notes.trim();
-  expense.updatedBy = userId;
+  if (typeof notes === "string") expense.notes = notes.trim();
+  expense.updatedBy = me.id;
 
   await expense.save();
 
   await SplitActivity.create({
     group: expense.group || null,
-    user: userId,
+    user: me.id,
     type: "expense_updated",
     title: "Updated expense",
     description: `Updated "${expense.title}" (₹${expense.amount})`,
     amount: expense.amount,
   });
 
-  res.status(200).json({
-    status: "success",
-    data: { expense },
-  });
+  res.status(200).json({ status: "success", data: { expense } });
 });
 
 exports.deleteSplitExpense = asyncHandler(async (req, res) => {
-  const expenseId = validateObjectId(req.params.id, "Expense ID");
-  const userId = req.user.id;
+  const me = await loadMe(req.user.id);
+  const expense = await loadAccessibleExpense(req.params.id, me);
+  const { title, amount, group } = expense;
 
-  const expense = await SplitExpense.findById(expenseId);
-  if (!expense) throw new AppError("Expense not found", 404);
-
-  const title = expense.title;
-  const amount = expense.amount;
-  const groupId = expense.group;
-
-  await SplitExpense.findByIdAndDelete(expenseId);
+  await expense.deleteOne();
 
   await SplitActivity.create({
-    group: groupId || null,
-    user: userId,
+    group: group || null,
+    user: me.id,
     type: "expense_deleted",
     title: "Deleted expense",
     description: `Deleted "${title}" (₹${amount})`,
     amount,
   });
 
-  res.status(200).json({
-    status: "success",
-    message: "Expense deleted successfully",
-  });
+  res.status(200).json({ status: "success", message: "Expense deleted successfully" });
 });
 
 // ==========================================
 // 5. SETTLEMENTS ("SETTLE UP")
 // ==========================================
 exports.createSettlement = asyncHandler(async (req, res) => {
-  const userId = req.user.id;
-  const currentUser = await User.findById(userId).lean();
-  if (!currentUser) throw new AppError("User not found", 404);
+  const me = await loadMe(req.user.id);
 
   const {
     group = null,
     payer,
     payee,
     amount,
-    date = new Date(),
+    date,
     paymentMethod = "Cash",
     referenceNumber = "",
     notes = "",
@@ -1457,79 +996,53 @@ exports.createSettlement = asyncHandler(async (req, res) => {
   }
 
   const numAmount = Number(amount);
-  if (isNaN(numAmount) || numAmount <= 0) {
+  if (!Number.isFinite(numAmount) || numAmount <= 0) {
     throw new AppError("Settlement amount must be greater than zero", 400);
   }
 
+  // Inside a group any member can record a payment; outside one you must be a party to it.
+  const targetGroup = group ? await requireGroupMember(group, me, { lean: true }) : null;
+  if (!targetGroup && !sameParty(payer, me) && !sameParty(payee, me)) {
+    throw new AppError("You can only record payments you made or received", 403);
+  }
+
   const settlement = await Settlement.create({
-    group: group || null,
-    payer: {
-      user: payer.user || null,
-      name: payer.name,
-      email: payer.email ? payer.email.toLowerCase() : "",
-    },
-    payee: {
-      user: payee.user || null,
-      name: payee.name,
-      email: payee.email ? payee.email.toLowerCase() : "",
-    },
+    group: targetGroup ? targetGroup._id : null,
+    payer: cleanParty(payer),
+    payee: cleanParty(payee),
     amount: round2(numAmount),
     date: date ? new Date(date) : new Date(),
     paymentMethod,
-    referenceNumber: referenceNumber ? referenceNumber.trim() : "",
-    notes: notes ? notes.trim() : "",
-    createdBy: userId,
+    referenceNumber: typeof referenceNumber === "string" ? referenceNumber.trim() : "",
+    notes: typeof notes === "string" ? notes.trim() : "",
+    createdBy: me.id,
   });
 
-  let targetGroup = null;
-  if (group) {
-    targetGroup = await Group.findById(group).lean();
-  }
-
   await SplitActivity.create({
-    group: group || null,
-    user: userId,
+    group: settlement.group,
+    user: me.id,
     type: "settlement_added",
     title: "Recorded payment",
-    description: `${payer.name} paid ${payee.name} ₹${settlement.amount} via ${paymentMethod}${
+    description: `${settlement.payer.name} paid ${settlement.payee.name} ₹${settlement.amount} via ${paymentMethod}${
       targetGroup ? ` in "${targetGroup.name}"` : ""
     }`,
     amount: settlement.amount,
     metadata: { settlementId: settlement._id },
   });
 
-  res.status(201).json({
-    status: "success",
-    data: { settlement },
-  });
+  res.status(201).json({ status: "success", data: { settlement } });
 });
 
 exports.getSettlements = asyncHandler(async (req, res) => {
-  const userId = req.user.id;
-  const currentUser = await User.findById(userId).lean();
-  const userEmail = currentUser?.email?.toLowerCase();
-
+  const me = await loadMe(req.user.id);
   const { groupId } = req.query;
-  const filter = {};
 
+  let filter;
   if (groupId) {
-    filter.group = validateObjectId(groupId, "Group ID");
+    const group = await requireGroupMember(groupId, me, { lean: true });
+    filter = { group: group._id };
   } else {
-    const groups = await getUserGroups(userId, userEmail);
-    const groupIds = groups.map((g) => g._id);
-
-    filter.$or = [
-      { createdBy: userId },
-      { "payer.user": userId },
-      { "payee.user": userId },
-      ...(userEmail
-        ? [
-            { "payer.email": userEmail },
-            { "payee.email": userEmail },
-          ]
-        : []),
-      { group: { $in: groupIds } },
-    ];
+    filter = await userScopeFilter(["payer", "payee"], me.id, me.email);
   }
 
   const settlements = await Settlement.find(filter)
@@ -1538,55 +1051,49 @@ exports.getSettlements = asyncHandler(async (req, res) => {
     .sort({ date: -1, createdAt: -1 })
     .lean();
 
-  res.status(200).json({
-    status: "success",
-    results: settlements.length,
-    data: { settlements },
-  });
+  res.status(200).json({ status: "success", results: settlements.length, data: { settlements } });
 });
 
 exports.deleteSettlement = asyncHandler(async (req, res) => {
-  const settlementId = validateObjectId(req.params.id, "Settlement ID");
-  const userId = req.user.id;
+  const me = await loadMe(req.user.id);
 
-  const settlement = await Settlement.findById(settlementId);
+  const settlement = await Settlement.findById(validateObjectId(req.params.id, "Settlement ID"));
   if (!settlement) throw new AppError("Settlement not found", 404);
 
-  const amount = settlement.amount;
+  const group = settlement.group ? await Group.findById(settlement.group).lean() : null;
+  if (!canAccessSettlement(settlement, me, group)) {
+    throw new AppError("You do not have access to this payment", 403);
+  }
+
+  const { amount, group: groupId } = settlement;
   const payerName = settlement.payer.name;
   const payeeName = settlement.payee.name;
-  const groupId = settlement.group;
 
-  await Settlement.findByIdAndDelete(settlementId);
+  await settlement.deleteOne();
 
   await SplitActivity.create({
     group: groupId || null,
-    user: userId,
+    user: me.id,
     type: "settlement_deleted",
     title: "Deleted payment",
     description: `Deleted settlement of ₹${amount} from ${payerName} to ${payeeName}`,
     amount,
   });
 
-  res.status(200).json({
-    status: "success",
-    message: "Settlement deleted successfully",
-  });
+  res.status(200).json({ status: "success", message: "Settlement deleted successfully" });
 });
 
 // ==========================================
 // 6. ACTIVITY FEED
 // ==========================================
 exports.getActivityFeed = asyncHandler(async (req, res) => {
-  const userId = req.user.id;
-  const currentUser = await User.findById(userId).lean();
-  const userEmail = currentUser?.email?.toLowerCase();
+  const me = await loadMe(req.user.id);
 
-  const groups = await getUserGroups(userId, userEmail);
+  const groups = await getUserGroups(me.id, me.email);
   const groupIds = groups.map((g) => g._id);
 
   const activities = await SplitActivity.find({
-    $or: [{ user: userId }, { group: { $in: groupIds } }],
+    $or: [{ user: me.id }, { group: { $in: groupIds } }],
   })
     .populate("user", "fullName email profileImageUrl")
     .populate("group", "name category icon")
@@ -1604,101 +1111,60 @@ exports.getActivityFeed = asyncHandler(async (req, res) => {
 // ==========================================
 // 7. REPORTS & ANALYTICS
 // ==========================================
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
 exports.getSplitAnalytics = asyncHandler(async (req, res) => {
-  const userId = req.user.id;
-  const currentUser = await User.findById(userId).lean();
-  const userEmail = currentUser?.email?.toLowerCase();
-  const uIdStr = String(userId);
+  const me = await loadMe(req.user.id);
 
   const [groups, allExpenses] = await Promise.all([
-    getUserGroups(userId, userEmail),
-    getUserExpenses(userId, userEmail),
+    getUserGroups(me.id, me.email),
+    getUserExpenses(me.id, me.email),
   ]);
 
-  // Group-wise spending
-  const groupSpendingMap = {};
+  const blankGroup = (name, category) => ({ name, category, totalSpent: 0, userPaid: 0, userShare: 0 });
+  const groupSpendingMap = { non_group: blankGroup("Non-Group (Direct)", "Friends") };
   groups.forEach((g) => {
-    groupSpendingMap[String(g._id)] = {
-      name: g.name,
-      category: g.category,
-      totalSpent: 0,
-      userPaid: 0,
-      userShare: 0,
-    };
+    groupSpendingMap[String(g._id)] = blankGroup(g.name, g.category);
   });
-  groupSpendingMap["non_group"] = {
-    name: "Non-Group (Direct)",
-    category: "Friends",
-    totalSpent: 0,
-    userPaid: 0,
-    userShare: 0,
-  };
 
-  // Category breakdown
   const categoryMap = {};
-
-  // Monthly spending
-  const monthlyMap = {};
+  const monthlyMap = {}; // "YYYY-MM" -> amount, so months sort chronologically
 
   allExpenses.forEach((exp) => {
-    const grpKey = exp.group ? String(exp.group) : "non_group";
-    if (groupSpendingMap[grpKey]) {
-      groupSpendingMap[grpKey].totalSpent += exp.amount;
+    const bucket = groupSpendingMap[exp.group ? String(exp.group) : "non_group"];
+    if (bucket) {
+      bucket.totalSpent += exp.amount;
+      (exp.paidBy || []).forEach((p) => {
+        if (sameParty(p, me)) bucket.userPaid += p.amount;
+      });
+      (exp.participants || []).forEach((p) => {
+        if (sameParty(p, me)) bucket.userShare += p.shareAmount;
+      });
     }
 
     const cat = exp.category || "General";
     categoryMap[cat] = (categoryMap[cat] || 0) + exp.amount;
 
-    const expDate = new Date(exp.date);
-    const monthKey = !isNaN(expDate.getTime())
-      ? expDate.toLocaleDateString("en-US", { year: "numeric", month: "short" })
-      : "Unknown";
-    monthlyMap[monthKey] = (monthlyMap[monthKey] || 0) + exp.amount;
-
-    // Check user's paid amount & share
-    (exp.paidBy || []).forEach((p) => {
-      if (
-        (p.user && String(p.user) === uIdStr) ||
-        (userEmail && p.email && p.email.toLowerCase() === userEmail)
-      ) {
-        if (groupSpendingMap[grpKey]) {
-          groupSpendingMap[grpKey].userPaid += p.amount;
-        }
-      }
-    });
-
-    (exp.participants || []).forEach((p) => {
-      if (
-        (p.user && String(p.user) === uIdStr) ||
-        (userEmail && p.email && p.email.toLowerCase() === userEmail)
-      ) {
-        if (groupSpendingMap[grpKey]) {
-          groupSpendingMap[grpKey].userShare += p.shareAmount;
-        }
-      }
-    });
+    const d = new Date(exp.date);
+    const key = isNaN(d.getTime()) ? "unknown" : `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+    monthlyMap[key] = (monthlyMap[key] || 0) + exp.amount;
   });
 
   const groupSpending = Object.values(groupSpendingMap)
     .filter((g) => g.totalSpent > 0)
-    .map((g) => ({
-      ...g,
-      totalSpent: round2(g.totalSpent),
-      userPaid: round2(g.userPaid),
-      userShare: round2(g.userShare),
-    }));
+    .map((g) => ({ ...g, totalSpent: round2(g.totalSpent), userPaid: round2(g.userPaid), userShare: round2(g.userShare) }));
 
-  const categoryDistribution = Object.entries(categoryMap).map(
-    ([category, amount]) => ({
-      category,
-      amount: round2(amount),
-    }),
-  );
-
-  const monthlyTrend = Object.entries(monthlyMap).map(([month, amount]) => ({
-    month,
+  const categoryDistribution = Object.entries(categoryMap).map(([category, amount]) => ({
+    category,
     amount: round2(amount),
   }));
+
+  const monthlyTrend = Object.keys(monthlyMap)
+    .sort()
+    .map((key) => {
+      const [year, month] = key.split("-");
+      return { month: key === "unknown" ? "Unknown" : `${MONTH_NAMES[Number(month) - 1]} ${year}`, amount: round2(monthlyMap[key]) };
+    });
 
   res.status(200).json({
     status: "success",
@@ -1707,10 +1173,7 @@ exports.getSplitAnalytics = asyncHandler(async (req, res) => {
       categoryDistribution,
       monthlyTrend,
       totalExpensesCount: allExpenses.length,
-      totalSharedSpent: round2(
-        allExpenses.reduce((sum, e) => sum + (e.amount || 0), 0),
-      ),
+      totalSharedSpent: round2(allExpenses.reduce((sum, e) => sum + (e.amount || 0), 0)),
     },
   });
 });
-

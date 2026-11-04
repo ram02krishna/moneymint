@@ -1,17 +1,18 @@
-import React, { useContext } from "react";
+import { useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
 import { UserContext } from "../../context/UserContextDefinition";
 import { useTheme } from "../../hooks/useTheme";
 import axiosInstance from "../../utils/axiosInstance";
 import { API_PATHS } from "../../utils/apiPath";
+import { getErrorMessage } from "../../utils/helper";
 import { GOOGLE_CLIENT_ID } from "../../utils/googleConfig";
 
 // "Continue with Google" button. The same backend endpoint handles both
 // sign in and sign up, so this is used on the Login and SignUp pages.
 // `text` is one of: "signin_with" | "signup_with" | "continue_with"
 const GoogleAuthButton = ({ text = "continue_with", onError }) => {
-  const { updateUser } = useContext(UserContext);
+  const { login } = useContext(UserContext);
   const { theme } = useTheme();
   const navigate = useNavigate();
 
@@ -30,15 +31,10 @@ const GoogleAuthButton = ({ text = "continue_with", onError }) => {
         credential: credentialResponse.credential,
       });
 
-      localStorage.setItem("token", response.data.token);
-      localStorage.setItem("user", JSON.stringify(response.data.data.user));
-      updateUser(response.data.data.user);
+      login(response.data.token, response.data.data.user);
       navigate("/dashboard");
     } catch (err) {
-      onError?.(
-        err.response?.data?.message ||
-          "Google sign-in failed. Please try again.",
-      );
+      onError?.(getErrorMessage(err, "Google sign-in failed. Please try again."));
     }
   };
 
@@ -46,11 +42,11 @@ const GoogleAuthButton = ({ text = "continue_with", onError }) => {
     <div className="w-full flex justify-center">
       <GoogleLogin
         onSuccess={handleSuccess}
-        onError={() => onError?.("Google sign-in failed. Check Authorized Origins in Google Cloud Console.")}
+        onError={() => onError?.("Google sign-in failed. Please try again.")}
         text={text}
         shape="pill"
         size="large"
-        width="340"
+        width={String(Math.min(340, window.innerWidth - 64))}
         theme={theme === "dark" ? "filled_black" : "outline"}
       />
     </div>

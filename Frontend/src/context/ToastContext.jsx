@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { LuCircleCheck, LuCircleAlert, LuInfo, LuX } from "react-icons/lu";
 import { ToastContext } from "./ToastContextDefinition";
 
@@ -46,8 +46,10 @@ export const ToastProvider = ({ children }) => {
     [push],
   );
 
+  const value = useMemo(() => ({ toast }), [toast]);
+
   return (
-    <ToastContext.Provider value={{ toast }}>
+    <ToastContext.Provider value={value}>
       {children}
       <div
         className="fixed bottom-5 right-5 z-[200] flex flex-col gap-3 w-[calc(100vw-2.5rem)] max-w-sm pointer-events-none"
@@ -59,6 +61,7 @@ export const ToastProvider = ({ children }) => {
           return (
             <div
               key={t.id}
+              role={t.type === "error" ? "alert" : "status"}
               className={`animate-slide-right pointer-events-auto flex items-start gap-3 bg-white dark:bg-gray-800 border ${s.ring} rounded-xl shadow-xl px-4 py-3`}
             >
               <Icon className={`text-xl mt-0.5 shrink-0 ${s.iconColor}`} />

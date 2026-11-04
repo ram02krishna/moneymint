@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   LuPlus,
   LuPencil,
@@ -22,6 +22,7 @@ import ContributeForm from "../../components/Goals/ContributeForm";
 import axiosInstance from "../../utils/axiosInstance";
 import { API_PATHS } from "../../utils/apiPath";
 import { useToast } from "../../hooks/useToast";
+import { useConfirm } from "../../hooks/useConfirm";
 import {
   addThousandsSeparator,
   formatShortDate,
@@ -32,6 +33,7 @@ const DAY = 24 * 60 * 60 * 1000;
 
 const Goals = () => {
   const toast = useToast();
+  const confirm = useConfirm();
   const [goals, setGoals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
@@ -109,7 +111,7 @@ const Goals = () => {
   };
 
   const handleDelete = async (goal) => {
-    if (!window.confirm(`Delete the goal "${goal.title}"?`)) return;
+    if (!(await confirm({ title: "Delete goal?", message: `"${goal.title}" and its contribution history will be removed.`, confirmLabel: "Delete" }))) return;
     try {
       await axiosInstance.delete(API_PATHS.GOALS.DELETE_GOAL(goal._id));
       setGoals((prev) => prev.filter((g) => g._id !== goal._id));
@@ -127,7 +129,7 @@ const Goals = () => {
           subtitle="Save towards the things that matter and watch your progress grow."
         >
           <button
-            className="add-btn add-btn-fill !text-white"
+            className="add-btn add-btn-fill"
             onClick={() => {
               setEditing(null);
               setFormOpen(true);
@@ -143,7 +145,7 @@ const Goals = () => {
           </div>
         ) : (
           <>
-            <div className="stagger-children flex md:grid md:grid-cols-3 gap-6 mb-8 overflow-x-auto md:overflow-x-visible pb-4 md:pb-0 no-scrollbar snap-x snap-mandatory">
+            <div className="stagger-children stat-grid stat-grid-3 mb-8">
               <InfoCard
                 icon={<LuBanknote />}
                 label="Total saved"
@@ -172,7 +174,7 @@ const Goals = () => {
                 message="Planning a trip, a new laptop or an emergency fund? Create a goal and track every rupee towards it."
                 action={
                   <button
-                    className="add-btn add-btn-fill !text-white"
+                    className="add-btn add-btn-fill"
                     onClick={() => setFormOpen(true)}
                   >
                     <LuPlus className="text-lg text-white" /> <span className="text-white">Create your first goal</span>
@@ -279,7 +281,7 @@ const Goals = () => {
                       </div>
 
                       <button
-                        className="card-btn justify-center !py-2.5 mt-auto"
+                        className="card-btn justify-center mt-auto"
                         onClick={() => setContributing(g)}
                       >
                         <LuHandCoins className="text-base" /> Add / withdraw money

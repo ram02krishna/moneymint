@@ -2,7 +2,6 @@
 export const API_PATHS = {
   AUTH: {
     LOGIN: "/api/v1/auth/login",
-    REGISTER: "/api/v1/auth/register",
     SEND_SIGNUP_OTP: "/api/v1/auth/send-signup-otp",
     RESEND_SIGNUP_OTP: "/api/v1/auth/resend-signup-otp",
     VERIFY_SIGNUP_OTP: "/api/v1/auth/verify-signup-otp",

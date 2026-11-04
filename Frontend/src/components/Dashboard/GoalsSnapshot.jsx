@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { LuTarget, LuArrowRight } from "react-icons/lu";
 import ProgressBar from "../ui/ProgressBar";
@@ -59,7 +59,7 @@ const GoalsSnapshot = () => {
               ? "No goals yet — set a target and start saving towards it."
               : "All your goals are reached! Set a new goal to keep saving."}
           </p>
-          <button className="add-btn add-btn-fill !text-white" onClick={() => navigate("/goals")}>
+          <button className="add-btn add-btn-fill" onClick={() => navigate("/goals")}>
             Create a goal
           </button>
         </div>

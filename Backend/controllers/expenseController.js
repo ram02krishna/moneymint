@@ -1,198 +1,102 @@
 const Expense = require("../models/Expense");
-const ExcelJS = require("exceljs");
 const asyncHandler = require("../utils/asyncHandler");
 const AppError = require("../utils/AppError");
 const { validateObjectId } = require("../utils/queryValidator");
+const { parsePagination } = require("../utils/pagination");
+const { parseDayRange } = require("../utils/dateRange");
+const { searchRegex } = require("../utils/escapeRegex");
+const { sendWorkbook, DATE_FORMAT } = require("../utils/excel");
 
-// add new expense function
-exports.addExpense = asyncHandler(async (req, res, next) => {
-  let { title, icon, amount, category, date, description } = req.body;
+const toAmount = (value) => {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) throw new AppError("Amount must be a number", 400);
+  return amount;
+};
 
-  // checking if amount is number
-  let myAmt = Number(amount);
-  if (isNaN(myAmt)) {
-    return next(new AppError("Amount must be a number", 400));
-  }
-
-  // create the expense in db
-  let newExp = await Expense.create({
-    user: req.user.id,
-    title: title,
-    icon: icon,
-    amount: myAmt,
-    category: category,
-    date: date,
-    description: description,
-  });
-
-  res.status(201).json({
-    status: "success",
-    data: {
-      expense: newExp,
-    },
-  });
+const pickFields = ({ title, icon, amount, category, date, description }) => ({
+  title,
+  icon,
+  amount: toAmount(amount),
+  category,
+  date,
+  description,
 });
 
-// get all expenses for the user
+exports.addExpense = asyncHandler(async (req, res) => {
+  const expense = await Expense.create({ user: req.user.id, ...pickFields(req.body) });
+  res.status(201).json({ status: "success", data: { expense } });
+});
+
 exports.getAllExpenses = asyncHandler(async (req, res) => {
-  let page = req.query.page;
-  let limit = req.query.limit;
-  let startDate = req.query.startDate;
-  let endDate = req.query.endDate;
-  let search = req.query.search;
+  const { page, limit, startDate, endDate, search } = req.query;
+  const query = { user: req.user.id };
 
-  let myQuery = { user: req.user.id };
+  const range = parseDayRange(startDate, endDate);
+  if (range) query.date = range;
 
-  // filter by date
-  if (startDate || endDate) {
-    myQuery.date = {};
-    if (startDate) {
-      let start = new Date(startDate);
-      start.setHours(0, 0, 0, 0);
-      myQuery.date.$gte = start;
-    }
-    if (endDate) {
-      let end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
-      myQuery.date.$lte = end;
-    }
-  }
-
-  // filter by search term
   if (search) {
-    let searchWord = new RegExp(search, "i");
-    myQuery.$or = [{ title: searchWord }, { category: searchWord }];
+    const pattern = searchRegex(search);
+    query.$or = [{ title: pattern }, { category: pattern }];
   }
 
+  // no pagination params -> everything (used by exports and charts)
   if (!page && !limit) {
-    let allExpenses = await Expense.find(myQuery).sort({ date: -1 }).lean();
-    return res.status(200).json({
-      status: "success",
-      results: allExpenses.length,
-      data: { expenses: allExpenses },
-    });
+    const expenses = await Expense.find(query).sort({ date: -1 }).lean();
+    return res.status(200).json({ status: "success", results: expenses.length, data: { expenses } });
   }
 
-  // pagination code
-  let pageNo = parseInt(page) || 1;
-  let limitVal = parseInt(limit) || 10;
-  let skipVal = (pageNo - 1) * limitVal;
-
-  let [finalExpenses, totalCount] = await Promise.all([
-    Expense.find(myQuery)
-      .sort({ date: -1 })
-      .skip(skipVal)
-      .limit(limitVal)
-      .lean(),
-    Expense.countDocuments(myQuery),
+  const pageInfo = parsePagination(req.query);
+  const [expenses, total] = await Promise.all([
+    Expense.find(query).sort({ date: -1 }).skip(pageInfo.skip).limit(pageInfo.limit).lean(),
+    Expense.countDocuments(query),
   ]);
 
   res.status(200).json({
     status: "success",
-    results: finalExpenses.length,
+    results: expenses.length,
     pagination: {
-      total: totalCount,
-      page: pageNo,
-      limit: limitVal,
-      totalPages: Math.ceil(totalCount / limitVal),
+      total,
+      page: pageInfo.page,
+      limit: pageInfo.limit,
+      totalPages: Math.ceil(total / pageInfo.limit),
     },
-    data: { expenses: finalExpenses },
+    data: { expenses },
   });
 });
 
-// delete an expense
 exports.deleteExpense = asyncHandler(async (req, res, next) => {
-  let expId = validateObjectId(req.params.id, "Expense ID");
-  let uId = validateObjectId(req.user.id, "User ID");
-
-  let deletedExp = await Expense.findOneAndDelete({
-    _id: expId,
-    user: uId,
+  const deleted = await Expense.findOneAndDelete({
+    _id: validateObjectId(req.params.id, "Expense ID"),
+    user: req.user.id,
   });
-
-  if (!deletedExp) {
-    return next(new AppError("Could not find expense to delete", 404));
-  }
-
-  res.status(204).json({
-    status: "success",
-    data: null,
-  });
+  if (!deleted) return next(new AppError("Could not find expense to delete", 404));
+  res.status(204).end();
 });
 
-// update an expense
 exports.updateExpense = asyncHandler(async (req, res, next) => {
-  let { title, icon, amount, category, date, description } = req.body;
-
-  let myAmt = Number(amount);
-  if (isNaN(myAmt)) {
-    return next(new AppError("Amount must be a number", 400));
-  }
-
-  let expId = validateObjectId(req.params.id, "Expense ID");
-  let uId = validateObjectId(req.user.id, "User ID");
-
-  let updatedExp = await Expense.findOneAndUpdate(
-    { _id: expId, user: uId },
-    {
-      title: title,
-      icon: icon,
-      amount: myAmt,
-      category: category,
-      date: date,
-      description: description,
-    },
+  const expense = await Expense.findOneAndUpdate(
+    { _id: validateObjectId(req.params.id, "Expense ID"), user: req.user.id },
+    pickFields(req.body),
     { new: true, runValidators: true },
   );
-
-  if (!updatedExp) {
-    return next(new AppError("Could not find expense to update", 404));
-  }
-
-  res.status(200).json({
-    status: "success",
-    data: {
-      expense: updatedExp,
-    },
-  });
+  if (!expense) return next(new AppError("Could not find expense to update", 404));
+  res.status(200).json({ status: "success", data: { expense } });
 });
 
-// download expenses in excel format
 exports.downloadExpenseExcel = asyncHandler(async (req, res, next) => {
-  let myExpenses = await Expense.find({ user: req.user.id }).lean();
-  if (myExpenses.length === 0) {
-    return next(new AppError("No expenses to download", 404));
-  }
+  const expenses = await Expense.find({ user: req.user.id }).sort({ date: -1 }).lean();
+  if (expenses.length === 0) return next(new AppError("No expenses to download", 404));
 
-  let wb = new ExcelJS.Workbook();
-  let ws = wb.addWorksheet("Expenses");
-
-  let cleanData = [];
-  for (let i = 0; i < myExpenses.length; i++) {
-    let item = myExpenses[i];
-    cleanData.push({
-      title: item.title,
-      amount: item.amount,
-      category: item.category,
-      date: item.date,
-      description: item.description,
-    });
-  }
-
-  if (cleanData.length > 0) {
-    let myHeaders = Object.keys(cleanData[0]);
-    ws.addRow(myHeaders); //worksheet
-    for (let j = 0; j < cleanData.length; j++) {
-      ws.addRow(Object.values(cleanData[j]));
-    }
-  }
-
-  res.setHeader(
-    "Content-Type",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  );
-  res.setHeader("Content-Disposition", "attachment; filename=expenses.xlsx");
-
-  await wb.xlsx.write(res);
-  res.end();
+  await sendWorkbook(res, {
+    sheetName: "Expenses",
+    filename: "expenses.xlsx",
+    columns: [
+      { header: "Date", key: "date", width: 14, style: { numFmt: DATE_FORMAT } },
+      { header: "Title", key: "title", width: 28 },
+      { header: "Category", key: "category", width: 22 },
+      { header: "Description", key: "description", width: 32 },
+      { header: "Amount", key: "amount", width: 14 },
+    ],
+    rows: expenses,
+  });
 });

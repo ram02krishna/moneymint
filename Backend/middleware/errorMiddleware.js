@@ -65,6 +65,8 @@ module.exports = (err, req, res, next) => {
   else if (err.name === "ValidationError") error = handleValidationErrorDB(err);
   else if (err.name === "JsonWebTokenError") error = handleJWTError();
   else if (err.name === "TokenExpiredError") error = handleJWTExpiredError();
+  else if (err.name === "MulterError")
+    error = new AppError(err.code === "LIMIT_FILE_SIZE" ? "Image must be 5 MB or smaller" : err.message, 400);
   else if (err.type === "entity.parse.failed") error = new AppError("Request body is not valid JSON", 400);
 
   sendErrorProd(error, res);

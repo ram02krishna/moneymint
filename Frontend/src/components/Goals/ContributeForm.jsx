@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { addThousandsSeparator } from "../../utils/helper";
 
 const ContributeForm = ({ goal, onSave, onCancel }) => {
@@ -102,13 +102,13 @@ const ContributeForm = ({ goal, onSave, onCancel }) => {
       />
 
       <div className="flex justify-end gap-3 mt-2">
-        <button type="button" className="card-btn !px-5 !py-3" onClick={onCancel}>
+        <button type="button" className="btn-secondary" onClick={onCancel}>
           Cancel
         </button>
         <button
           type="submit"
           disabled={saving}
-          className="btn-primary !w-auto !my-0 disabled:opacity-60"
+          className="btn-primary !w-auto !my-0"
         >
           {saving ? "Saving..." : mode === "deposit" ? "Add to goal" : "Withdraw"}
         </button>

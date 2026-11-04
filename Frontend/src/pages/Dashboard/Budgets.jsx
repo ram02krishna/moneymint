@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import {
   LuPlus,
@@ -21,6 +21,7 @@ import BudgetForm from "../../components/Budget/BudgetForm";
 import axiosInstance from "../../utils/axiosInstance";
 import { API_PATHS } from "../../utils/apiPath";
 import { useToast } from "../../hooks/useToast";
+import { useConfirm } from "../../hooks/useConfirm";
 import {
   addThousandsSeparator,
   capitalize,
@@ -57,6 +58,7 @@ const TABS = [
 
 const Budgets = () => {
   const toast = useToast();
+  const confirm = useConfirm();
   const location = useLocation();
   const [report, setReport] = useState([]);
   const [expenseCategories, setExpenseCategories] = useState([]);
@@ -148,7 +150,7 @@ const Budgets = () => {
   };
 
   const handleDelete = async (b) => {
-    if (!window.confirm(`Delete the ${b.category} budget?`)) return;
+    if (!(await confirm({ title: "Delete budget?", message: `The ${b.category} budget will be removed.`, confirmLabel: "Delete" }))) return;
     try {
       await axiosInstance.delete(API_PATHS.BUDGET.DELETE_BUDGET(b._id));
       setReport((prev) => prev.filter((x) => x._id !== b._id));
@@ -165,7 +167,7 @@ const Budgets = () => {
           title="Budgets"
           subtitle="Set spending limits per category and track them against your real expenses."
         >
-          <button className="add-btn add-btn-fill !text-white" onClick={openCreate}>
+          <button className="add-btn add-btn-fill" onClick={openCreate}>
             <LuPlus className="text-lg text-white" /> <span className="text-white">New budget</span>
           </button>
         </PageHeader>
@@ -176,7 +178,7 @@ const Budgets = () => {
           </div>
         ) : (
           <>
-            <div className="stagger-children flex md:grid md:grid-cols-3 gap-6 mb-8 overflow-x-auto md:overflow-x-visible pb-4 md:pb-0 no-scrollbar snap-x snap-mandatory">
+            <div className="stagger-children stat-grid stat-grid-3 mb-8">
               <InfoCard
                 icon={<LuWallet />}
                 label="Total budgeted"
@@ -223,7 +225,7 @@ const Budgets = () => {
                     : "Try another tab, or create a new budget for this period."
                 }
                 action={
-                  <button className="add-btn add-btn-fill !text-white" onClick={openCreate}>
+                  <button className="add-btn add-btn-fill" onClick={openCreate}>
                     <LuPlus className="text-lg text-white" /> <span className="text-white">New budget</span>
                   </button>
                 }

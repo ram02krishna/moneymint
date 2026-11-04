@@ -1,25 +1,10 @@
 // check email format
-export let validateEmail = (email) => {
-  let regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return regex.test(email);
-};
-
-// get name initials
-export let getInitials = (name) => {
-  if (!name) return "";
-
-  let words = name.split(" ");
-  let initials = "";
-
-  for (let i = 0; i < Math.min(words.length, 2); i++) {
-    initials += words[i][0];
-  }
-
-  return initials.toUpperCase();
+export const validateEmail = (email) => {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 };
 
 // add commas to numbers with proper Indian currency formatting
-export let addThousandsSeparator = (num) => {
+export const addThousandsSeparator = (num) => {
   if (num == null || isNaN(num) || num === "") return "0";
   const n = Number(num);
   if (isNaN(n)) return String(num);
@@ -32,80 +17,20 @@ export let addThousandsSeparator = (num) => {
   });
 };
 
-export let prepareExpenseLineChartData = (data = []) => {
-  if (!Array.isArray(data) || data.length === 0) {
-    return [];
-  }
+// Sums amounts per calendar day, oldest first: [{ month: "05 Nov", amount }]
+export const prepareDailyTotals = (data = []) => {
+  if (!Array.isArray(data)) return [];
 
-  let sortedData = [...data].sort(
-    (a, b) => new Date(a.date) - new Date(b.date),
-  );
-
-  let dayMap = {};
-  for (let i = 0; i < sortedData.length; i++) {
-    let item = sortedData[i];
-    if (!item) continue;
-    let d = new Date(item.date);
-    if (isNaN(d.getTime())) continue;
-
-    let dayKey = d.toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
+  const totals = new Map();
+  [...data]
+    .filter((item) => item && !isNaN(new Date(item.date).getTime()))
+    .sort((a, b) => new Date(a.date) - new Date(b.date))
+    .forEach((item) => {
+      const label = new Date(item.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+      totals.set(label, (totals.get(label) || 0) + (item.amount || 0));
     });
 
-    if (!dayMap[dayKey]) {
-      dayMap[dayKey] = 0;
-    }
-    dayMap[dayKey] += item.amount || 0;
-  }
-
-  let chartData = [];
-  for (let dateStr in dayMap) {
-    chartData.push({
-      month: dateStr,
-      amount: dayMap[dateStr],
-    });
-  }
-
-  return chartData;
-};
-
-export let prepareIncomeBarChartData = (data = []) => {
-  if (!Array.isArray(data) || data.length === 0) {
-    return [];
-  }
-
-  let sortedData = [...data].sort(
-    (a, b) => new Date(a.date) - new Date(b.date),
-  );
-
-  let dayMap = {};
-  for (let i = 0; i < sortedData.length; i++) {
-    let item = sortedData[i];
-    if (!item) continue;
-    let d = new Date(item.date);
-    if (isNaN(d.getTime())) continue;
-
-    let dayKey = d.toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-    });
-
-    if (!dayMap[dayKey]) {
-      dayMap[dayKey] = 0;
-    }
-    dayMap[dayKey] += item.amount || 0;
-  }
-
-  let chartData = [];
-  for (let dateStr in dayMap) {
-    chartData.push({
-      month: dateStr,
-      amount: dayMap[dateStr],
-    });
-  }
-
-  return chartData;
+  return [...totals].map(([month, amount]) => ({ month, amount }));
 };
 
 export const CHART_COLORS = [
@@ -139,6 +64,25 @@ export const toInputDate = (value) => {
   let day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 };
+
+// ₹1,23,456 (decimals only when the amount has them)
+export const formatCurrency = (value) => {
+  const num = Number(value);
+  if (value == null || isNaN(num)) return "₹0";
+  return `${num < 0 ? "-" : ""}₹${addThousandsSeparator(Math.abs(num))}`;
+};
+
+// local "YYYY-MM" key for a Date, used to ask the API for one month
+export const toMonthKey = (date = new Date()) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+
+// "November 2026"
+export const formatMonthLabel = (date) =>
+  date.toLocaleString("en-IN", { month: "long", year: "numeric" });
+
+// "02/11/2026"
+export const formatDate = (value) =>
+  new Date(value).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
 
 export const formatShortDate = (value) =>
   new Date(value).toLocaleDateString("en-IN", {

@@ -1,20 +1,18 @@
-import React from "react";
-
-const getInitials = (name) => {
-  if (!name) return "";
-  const names = name.trim().split(" ");
-  if (names.length === 1) return names[0][0].toUpperCase();
-  return (names[0][0] + names[names.length - 1][0]).toUpperCase();
+const getInitials = (name = "") => {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return "";
+  const first = words[0][0];
+  const last = words.length > 1 ? words[words.length - 1][0] : "";
+  return (first + last).toUpperCase();
 };
 
-const CharAvatar = ({ fullName, width, height, style }) => {
-  return (
-    <div
-      className={`${width || "w-12"} ${height || "h-12"} ${style || ""} flex items-center justify-center rounded-full text-gray-900 font-medium bg-gray-100 hover-lift transition-all duration-300 ease-in-out`}
-    >
-      {getInitials(fullName || "")}
-    </div>
-  );
-};
+const CharAvatar = ({ fullName, width = "w-12", height = "h-12", style = "" }) => (
+  <div
+    className={`${width} ${height} ${style} flex items-center justify-center rounded-full font-semibold shrink-0 bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300`}
+    aria-hidden="true"
+  >
+    {getInitials(fullName)}
+  </div>
+);
 
 export default CharAvatar;

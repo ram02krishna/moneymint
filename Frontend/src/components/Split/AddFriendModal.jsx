@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { LuUserPlus, LuSearch, LuMail, LuPhone, LuUser, LuCheck } from "react-icons/lu";
+import { useState, useEffect } from "react";
+import { LuUserPlus, LuSearch, LuMail, LuPhone, LuUser } from "react-icons/lu";
 import Modal from "../layouts/Modal";
 import CharAvatar from "../Cards/CharAvatar";
 import axiosInstance from "../../utils/axiosInstance";
@@ -179,7 +179,7 @@ const AddFriendModal = ({ isOpen, onClose, onSubmit, loading = false }) => {
                       type="button"
                       onClick={() => handleAddRegisteredUser(u)}
                       disabled={loading}
-                      className="add-btn text-xs py-1.5 px-3"
+                      className="add-btn"
                     >
                       <LuUserPlus className="text-sm" /> Add
                     </button>
@@ -267,7 +267,7 @@ const AddFriendModal = ({ isOpen, onClose, onSubmit, loading = false }) => {
               </button>
               <button
                 type="submit"
-                className="btn-primary w-auto px-8"
+                className="btn-primary w-auto"
                 disabled={loading}
               >
                 {loading ? "Adding..." : "Add Friend"}

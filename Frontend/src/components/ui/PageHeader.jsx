@@ -1,4 +1,3 @@
-import React from "react";
 
 // Shared page heading with optional subtitle and right-side actions
 const PageHeader = ({ title, subtitle, children }) => (

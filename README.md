@@ -227,7 +227,8 @@ Now open `http://localhost:5173` in your browser and you're good to go!
 | `SESSION_SECRET` | Secret for express-session |
 | `PORT` | Port the backend runs on (default: 5000) |
 | `NODE_ENV` | `development` or `production` |
-| `CLIENT_URL` | Your frontend URL (needed for CORS) |
+| `CLIENT_URL` | Your frontend URL(s), comma separated (needed for CORS) |
+| `ALLOW_VERCEL_PREVIEWS` | Set to `false` to stop accepting `*.vercel.app` preview origins (default: accepted) |
 | `CLOUDINARY_CLOUD_NAME` | From your Cloudinary dashboard |
 | `CLOUDINARY_API_KEY` | From your Cloudinary dashboard |
 | `CLOUDINARY_API_SECRET` | From your Cloudinary dashboard |
@@ -250,12 +251,15 @@ All routes are prefixed with `/api/v1`. Protected routes need an `Authorization:
 
 | Method | Endpoint | Protected | Description |
 |---|---|---|---|
-| POST | `/register` | No | Create a new account |
+| POST | `/send-signup-otp` | No | Email a 6-digit code to start sign-up |
+| POST | `/resend-signup-otp` | No | Send a fresh sign-up code |
+| POST | `/verify-signup-otp` | No | Verify the code and create the account |
+| POST | `/google` | No | Sign in / up with Google |
 | POST | `/login` | No | Login and get a JWT |
 | GET | `/getUser` | Yes | Get your profile |
 | PUT | `/update` | Yes | Update your profile |
 | POST | `/change-password` | Yes | Change your password |
-| POST | `/upload-image` | Yes | Upload a profile photo |
+| POST | `/upload-image` | No | Upload a profile photo (max 5 MB, rate limited) |
 | POST | `/forgot-password` | No | Request password reset OTP |
 | PUT | `/reset-password` | No | Reset password with OTP |
 
@@ -310,8 +314,10 @@ I tried to make the app reasonably secure. Here's what I added:
 
 - **JWT auth** with 1-hour expiry and httpOnly cookies for sessions
 - **bcryptjs** to hash passwords (never storing plain text)
-- **Rate limiting** — auth endpoints allow only 5 requests per 15 minutes to prevent brute force attacks
-- **express-validator** to validate and sanitize all inputs
+- **Rate limiting** — login, sign-up, forgot/reset password endpoints allow only a handful of requests per 15 minutes; uploads are capped too
+- **Reset codes** are generated with `crypto.randomInt`, single use, and invalidated after 5 wrong guesses
+- **Authorization checks** on every split-expense route (group membership / involvement) so IDs from other people's data can't be read, edited or deleted
+- **express-validator** to validate all inputs (text is stored as typed; React/React Native escape on render)
 - **Helmet.js** to set secure HTTP headers (CSP, X-Frame-Options, HSTS, etc.)
 - **CORS** configured to only allow requests from the frontend URL
 - **Mongoose** to prevent NoSQL injection via parameterized queries
@@ -326,3 +332,14 @@ For more details see [SECURITY.md](./Backend/SECURITY.md).
 GitHub: [ram02krishna](https://github.com/ram02krishna)
 
 Feel free to fork it, use it, or suggest improvements!
+
+---
+
+## Tests and maintenance
+
+```bash
+cd Backend
+npm test                                   # unit tests (split maths, access rules, date/pagination helpers, CORS, validators)
+node scripts/decode-legacy-entities.js     # preview rows saved with HTML entities (e.g. "McDonald&#x27;s")
+node scripts/decode-legacy-entities.js --apply   # fix them (run once)
+```

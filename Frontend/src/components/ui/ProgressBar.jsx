@@ -1,4 +1,3 @@
-import React from "react";
 import { getProgressTone } from "../../utils/helper";
 
 const ProgressBar = ({ percent = 0, barClass, height = "h-2.5" }) => {

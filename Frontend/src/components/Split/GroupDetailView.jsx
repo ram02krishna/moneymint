@@ -1,19 +1,5 @@
-import React, { useState, useEffect, useContext } from "react";
-import {
-  LuUsers,
-  LuPlus,
-  LuHandCoins,
-  LuReceipt,
-  LuArrowLeft,
-  LuPencil,
-  LuTrash2,
-  LuUserPlus,
-  LuZap,
-  LuCheck,
-  LuSparkles,
-  LuArrowRight,
-  LuWallet,
-} from "react-icons/lu";
+import { useState, useEffect, useCallback, useContext } from "react";
+import { LuUsers, LuPlus, LuHandCoins, LuReceipt, LuArrowLeft, LuPencil, LuTrash2, LuUserPlus, LuZap, LuCheck, LuArrowRight, LuWallet } from "react-icons/lu";
 import CharAvatar from "../Cards/CharAvatar";
 import InfoCard from "../Cards/InfoCard";
 import EmptyState from "../ui/EmptyState";
@@ -21,8 +7,9 @@ import LoadingSpinner from "../LoadingSpinner";
 import axiosInstance from "../../utils/axiosInstance";
 import { API_PATHS } from "../../utils/apiPath";
 import { UserContext } from "../../context/UserContextDefinition";
-import { formatCurrency, emojiFor } from "../../utils/splitHelper";
-import { addThousandsSeparator } from "../../utils/helper";
+import { addThousandsSeparator, formatCurrency, emojiFor, getErrorMessage } from "../../utils/helper";
+import { useConfirm } from "../../hooks/useConfirm";
+import { useToast } from "../../hooks/useToast";
 
 const GroupDetailView = ({
   groupId,
@@ -34,6 +21,8 @@ const GroupDetailView = ({
   onEditGroup,
   onDeleteGroup,
 }) => {
+  const confirm = useConfirm();
+  const toast = useToast();
   const { user } = useContext(UserContext);
   const [loading, setLoading] = useState(true);
   const [groupData, setGroupData] = useState(null);
@@ -47,9 +36,9 @@ const GroupDetailView = ({
   const [addingMember, setAddingMember] = useState(false);
   const [memberError, setMemberError] = useState("");
 
-  const fetchGroupDetail = async () => {
+  // only the first load replaces the screen with a spinner; refreshes after edits update in place
+  const fetchGroupDetail = useCallback(async () => {
     try {
-      setLoading(true);
       const res = await axiosInstance.get(API_PATHS.SPLIT.GROUPS.GET_ONE(groupId));
       setGroupData(res.data?.data);
     } catch (err) {
@@ -57,13 +46,11 @@ const GroupDetailView = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [groupId]);
 
   useEffect(() => {
-    if (groupId) {
-      fetchGroupDetail();
-    }
-  }, [groupId]);
+    if (groupId) fetchGroupDetail();
+  }, [groupId, fetchGroupDetail]);
 
   const handleAddMember = async (e) => {
     e.preventDefault();
@@ -91,14 +78,14 @@ const GroupDetailView = ({
   };
 
   const handleRemoveMember = async (memberId, memberName) => {
-    if (!window.confirm(`Remove "${memberName}" from this group?`)) return;
+    if (!(await confirm({ title: "Remove member?", message: `"${memberName}" will be removed from this group.`, confirmLabel: "Remove" }))) return;
     try {
       await axiosInstance.delete(
         API_PATHS.SPLIT.GROUPS.REMOVE_MEMBER(groupId, memberId),
       );
       fetchGroupDetail();
     } catch (err) {
-      alert(err?.response?.data?.message || err.message || "Failed to remove member");
+      toast.error(getErrorMessage(err, "Failed to remove member"));
     }
   };
 
@@ -162,21 +149,21 @@ const GroupDetailView = ({
           <button
             type="button"
             onClick={() => onAddExpense(group._id)}
-            className="add-btn add-btn-fill text-xs py-2 px-4 inline-flex items-center gap-1.5"
+            className="add-btn add-btn-fill"
           >
             <LuPlus className="text-base" /> Add Group Expense
           </button>
           <button
             type="button"
             onClick={() => onSettleUp(null, 0, group)}
-            className="add-btn text-xs py-2 px-4 inline-flex items-center gap-1.5"
+            className="add-btn"
           >
             <LuHandCoins className="text-base" /> Settle Up
           </button>
           <button
             type="button"
             onClick={() => onEditGroup(group)}
-            className="card-btn py-2 text-xs"
+            className="card-btn"
             title="Edit group"
           >
             <LuPencil className="text-sm" /> Edit
@@ -184,12 +171,12 @@ const GroupDetailView = ({
           {isCreator && (
             <button
               type="button"
-              onClick={() => {
-                if (window.confirm(`Delete group "${group.name}"?`)) {
+              onClick={async () => {
+                if (await confirm({ title: "Delete group?", message: `"${group.name}" and its history will be hidden for all members.`, confirmLabel: "Delete" })) {
                   onDeleteGroup(group._id);
                 }
               }}
-              className="card-btn py-2 text-xs hover:text-red-600"
+              className="card-btn hover:text-red-600"
               title="Delete group"
             >
               <LuTrash2 className="text-sm" />
@@ -199,7 +186,7 @@ const GroupDetailView = ({
       </div>
 
       {/* Top Banner Stats Grid */}
-      <div className="stagger-children flex md:grid md:grid-cols-3 gap-6 mb-8 overflow-x-auto md:overflow-x-visible pb-4 md:pb-0 no-scrollbar snap-x snap-mandatory">
+      <div className="stagger-children stat-grid stat-grid-3 mb-8">
         <InfoCard
           icon={<LuWallet />}
           label="Your balance in group"
@@ -325,7 +312,7 @@ const GroupDetailView = ({
                     onClick={() =>
                       onSettleUp(debt.fromMember, debt.amount, group, debt.toMember)
                     }
-                    className="add-btn text-[11px] py-1 px-2.5"
+                    className="add-btn"
                   >
                     Pay
                   </button>
@@ -381,7 +368,7 @@ const GroupDetailView = ({
             <button
               type="submit"
               disabled={addingMember}
-              className="btn-primary w-auto text-xs py-2 px-6"
+              className="btn-primary w-auto"
             >
               {addingMember ? "Adding..." : "Add Member"}
             </button>
@@ -438,7 +425,7 @@ const GroupDetailView = ({
                 <button
                   type="button"
                   onClick={() => onAddExpense(group._id)}
-                  className="add-btn add-btn-fill text-xs py-2 px-5 inline-flex items-center gap-1.5"
+                  className="add-btn add-btn-fill"
                 >
                   <LuPlus className="text-sm" /> Add First Expense
                 </button>
@@ -506,9 +493,9 @@ const GroupDetailView = ({
                       </button>
                       <button
                         type="button"
-                        onClick={(e) => {
+                        onClick={async (e) => {
                           e.stopPropagation();
-                          if (window.confirm(`Delete expense "${exp.title}"?`)) {
+                          if (await confirm({ title: "Delete expense?", message: `"${exp.title}" will be removed for everyone in it.`, confirmLabel: "Delete" })) {
                             onDeleteExpense(exp._id);
                           }
                         }}
@@ -603,7 +590,7 @@ const GroupDetailView = ({
                 <button
                   type="button"
                   onClick={() => onSettleUp(null, 0, group)}
-                  className="add-btn add-btn-fill text-xs py-2 px-5 inline-flex items-center gap-1.5"
+                  className="add-btn add-btn-fill"
                 >
                   <LuHandCoins className="text-sm" /> Record First Settlement
                 </button>

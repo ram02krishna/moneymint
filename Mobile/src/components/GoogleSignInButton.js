@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, NativeModules, Pressable, StyleSheet, Text, TurboModuleRegistry, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { useTheme } from "../theme";

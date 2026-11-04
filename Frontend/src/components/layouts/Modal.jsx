@@ -1,4 +1,4 @@
-import React, { useEffect, useId } from "react";
+import { useEffect, useId, useRef } from "react";
 import ReactDOM from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -12,20 +12,38 @@ const Modal = ({
   maxWidth = "max-w-2xl",
 }) => {
   const titleId = useId();
+  const dialogRef = useRef(null);
+  // callers usually pass an inline function; a ref keeps the effect from re-running on every render
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
 
   useEffect(() => {
     if (!isOpen) return undefined;
-    const onKeyDown = (event) => {
-      if (event.key === "Escape") onClose?.();
-    };
+
+    const previouslyFocused = document.activeElement;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") onCloseRef.current?.();
+    };
     document.addEventListener("keydown", onKeyDown);
+
+    // move focus into the dialog (first field if there is one) and give it back on close
+    const frame = requestAnimationFrame(() => {
+      const target = dialogRef.current?.querySelector("input:not([type=hidden]), select, textarea") || dialogRef.current;
+      target?.focus({ preventScroll: true });
+    });
+
     return () => {
+      cancelAnimationFrame(frame);
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", onKeyDown);
+      previouslyFocused?.focus?.({ preventScroll: true });
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   return ReactDOM.createPortal(
     <AnimatePresence>
@@ -42,10 +60,12 @@ const Modal = ({
           }}
         >
           <motion.div
+            ref={dialogRef}
+            tabIndex={-1}
             role="dialog"
             aria-modal="true"
             aria-labelledby={titleId}
-            className={`relative w-full ${maxWidth} my-auto`}
+            className={`relative w-full ${maxWidth} my-auto outline-none`}
             initial={{ opacity: 0, y: 16, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.97 }}

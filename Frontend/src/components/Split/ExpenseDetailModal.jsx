@@ -1,16 +1,7 @@
-import React from "react";
-import {
-  LuReceipt,
-  LuCalendar,
-  LuLayers,
-  LuUsers,
-  LuFileText,
-  LuPencil,
-  LuTrash2,
-  LuCircleCheck,
-} from "react-icons/lu";
+import { formatCurrency, emojiFor } from "../../utils/helper";
+import { LuCalendar, LuUsers, LuFileText, LuPencil, LuTrash2 } from "react-icons/lu";
 import Modal from "../layouts/Modal";
-import { formatCurrency, emojiFor } from "../../utils/splitHelper";
+import { useConfirm } from "../../hooks/useConfirm";
 
 const ExpenseDetailModal = ({
   isOpen,
@@ -19,6 +10,7 @@ const ExpenseDetailModal = ({
   onEdit,
   onDelete,
 }) => {
+  const confirm = useConfirm();
   if (!expense) return null;
 
   const formattedDate = expense.date
@@ -197,8 +189,8 @@ const ExpenseDetailModal = ({
             </button>
             <button
               type="button"
-              onClick={() => {
-                if (window.confirm(`Delete expense "${expense.title}"?`)) {
+              onClick={async () => {
+                if (await confirm({ title: "Delete expense?", message: `"${expense.title}" will be removed for everyone in it.`, confirmLabel: "Delete" })) {
                   onDelete(expense._id);
                   onClose();
                 }
@@ -212,7 +204,7 @@ const ExpenseDetailModal = ({
           <button
             type="button"
             onClick={onClose}
-            className="btn-secondary py-2 px-6"
+            className="btn-secondary"
           >
             Close
           </button>

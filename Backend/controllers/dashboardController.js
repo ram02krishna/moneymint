@@ -3,6 +3,11 @@ const Expense = require("../models/Expense");
 const mongoose = require("mongoose");
 const asyncHandler = require("../utils/asyncHandler");
 const AppError = require("../utils/AppError");
+const { parseMonth } = require("../utils/dateRange");
+const { parsePagination } = require("../utils/pagination");
+
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const monthKey = (year, month) => `${year}-${String(month).padStart(2, "0")}`;
 
 // getting dashboard summary
 exports.getDashboardSummary = asyncHandler(async (req, res) => {
@@ -87,55 +92,11 @@ exports.getDashboardSummary = asyncHandler(async (req, res) => {
   });
 });
 
-// get expenses by category for last 30 days
-exports.getDashboardExpenseSummary = asyncHandler(async (req, res) => {
-  let pastMonth = new Date();
-  pastMonth.setDate(pastMonth.getDate() - 30);
-  let uId = req.user.id;
-
-  let mySummary = await Expense.aggregate([
-    {
-      $match: {
-        user: new mongoose.Types.ObjectId(uId),
-        date: { $gte: pastMonth },
-      },
-    },
-    {
-      $group: {
-        _id: "$category",
-        totalAmount: { $sum: "$amount" },
-      },
-    },
-    {
-      $sort: { totalAmount: -1 },
-    },
-  ]);
-
-  res.status(200).json({
-    status: "success",
-    results: mySummary.length,
-    data: {
-      summary: mySummary,
-    },
-  });
-});
-
 // get summary for a specific month
-exports.getMonthlyDashboardSummary = asyncHandler(async (req, res, next) => {
+exports.getMonthlyDashboardSummary = asyncHandler(async (req, res) => {
   let uId = req.user.id;
   let { month } = req.query;
-
-  if (!month) {
-    return next(new AppError("Need a month parameter", 400));
-  }
-
-  let [year, monthNum] = month.split("-");
-  if (!year || !monthNum || isNaN(year) || isNaN(monthNum)) {
-    return next(new AppError("Wrong month format", 400));
-  }
-
-  let startDate = new Date(year, monthNum - 1, 1);
-  let endDate = new Date(year, monthNum, 0, 23, 59, 59, 999);
+  const { start: startDate, end: endDate } = parseMonth(month);
 
   let [incomeStats, expenseStats] = await Promise.all([
     Income.aggregate([
@@ -217,24 +178,10 @@ exports.getMonthlyDashboardSummary = asyncHandler(async (req, res, next) => {
 });
 
 // get only monthly expenses with pages
-exports.getMonthlyExpenses = asyncHandler(async (req, res, next) => {
+exports.getMonthlyExpenses = asyncHandler(async (req, res) => {
   let uId = req.user.id;
-  let { month, page = 1, limit = 20 } = req.query;
-
-  if (!month) {
-    return next(new AppError("Need month parameter", 400));
-  }
-
-  let [year, monthNum] = month.split("-");
-  if (!year || !monthNum || isNaN(year) || isNaN(monthNum)) {
-    return next(new AppError("Wrong month format", 400));
-  }
-
-  let startDate = new Date(year, monthNum - 1, 1);
-  let endDate = new Date(year, monthNum, 0, 23, 59, 59, 999);
-  let pageNo = Math.max(1, parseInt(page));
-  let limitVal = Math.max(1, parseInt(limit));
-  let skipVal = (pageNo - 1) * limitVal;
+  const { start: startDate, end: endDate } = parseMonth(req.query.month);
+  const { page: pageNo, limit: limitVal, skip: skipVal } = parsePagination(req.query, { defaultLimit: 20 });
 
   let [myExpenses, totalCount] = await Promise.all([
     Expense.find({
@@ -264,24 +211,10 @@ exports.getMonthlyExpenses = asyncHandler(async (req, res, next) => {
 });
 
 // get monthly income with pages
-exports.getMonthlyIncome = asyncHandler(async (req, res, next) => {
+exports.getMonthlyIncome = asyncHandler(async (req, res) => {
   let uId = req.user.id;
-  let { month, page = 1, limit = 20 } = req.query;
-
-  if (!month) {
-    return next(new AppError("Need month parameter", 400));
-  }
-
-  let [year, monthNum] = month.split("-");
-  if (!year || !monthNum || isNaN(year) || isNaN(monthNum)) {
-    return next(new AppError("Wrong format", 400));
-  }
-
-  let startDate = new Date(year, monthNum - 1, 1);
-  let endDate = new Date(year, monthNum, 0, 23, 59, 59, 999);
-  let pageNo = Math.max(1, parseInt(page));
-  let limitVal = Math.max(1, parseInt(limit));
-  let skipVal = (pageNo - 1) * limitVal;
+  const { start: startDate, end: endDate } = parseMonth(req.query.month);
+  const { page: pageNo, limit: limitVal, skip: skipVal } = parsePagination(req.query, { defaultLimit: 20 });
 
   let [myIncomes, totalCount] = await Promise.all([
     Income.find({
@@ -316,73 +249,31 @@ exports.getTrendSummary = asyncHandler(async (req, res, next) => {
   let { month, year } = req.query;
 
   let isCalendarYear = !!year || req.query.calendarYear === "true";
-  let targetYear = year
-    ? parseInt(year)
-    : month
-      ? parseInt(month.split("-")[0])
-      : new Date().getFullYear();
-
-  let startDate, endDate;
   let monthList = [];
+  let startDate, endDate, targetYear;
 
   if (isCalendarYear) {
-    startDate = new Date(targetYear, 0, 1, 0, 0, 0, 0);
-    endDate = new Date(targetYear, 11, 31, 23, 59, 59, 999);
+    targetYear = year ? parseInt(year, 10) : month ? parseMonth(month).year : new Date().getUTCFullYear();
+    if (!Number.isInteger(targetYear) || targetYear < 1970 || targetYear > 2200) {
+      return next(new AppError("Invalid year", 400));
+    }
+    startDate = new Date(Date.UTC(targetYear, 0, 1));
+    endDate = new Date(Date.UTC(targetYear, 11, 31, 23, 59, 59, 999));
 
-    const monthNames = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ];
-    for (let m = 0; m < 12; m++) {
-      let key = `${targetYear}-${String(m + 1).padStart(2, "0")}`;
-      monthList.push({
-        key,
-        monthDisplay: monthNames[m],
-        monthIndex: m,
-      });
+    for (let m = 1; m <= 12; m++) {
+      monthList.push({ key: monthKey(targetYear, m), monthDisplay: MONTH_NAMES[m - 1] });
     }
   } else {
-    if (!month) {
-      let now = new Date();
-      month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-    }
-    let [yearStr, monthNum] = month.split("-");
-    if (!yearStr || !monthNum || isNaN(yearStr) || isNaN(monthNum)) {
-      return next(new AppError("Wrong format", 400));
-    }
-
-    let yr = parseInt(yearStr);
-    let mn = parseInt(monthNum);
-    let currentDate = new Date(yr, mn - 1, 1);
-    startDate = new Date(currentDate);
-    startDate.setMonth(startDate.getMonth() - 11);
-    startDate.setDate(1);
-    startDate.setHours(0, 0, 0, 0);
-
-    endDate = new Date(yr, mn, 0, 23, 59, 59, 999);
+    const now = new Date();
+    const anchor = parseMonth(month || monthKey(now.getUTCFullYear(), now.getUTCMonth() + 1));
+    startDate = new Date(Date.UTC(anchor.year, anchor.month - 12, 1));
+    endDate = anchor.end;
 
     for (let i = 11; i >= 0; i--) {
-      let d = new Date(currentDate);
-      d.setMonth(d.getMonth() - i);
-      let y = d.getFullYear();
-      let m = String(d.getMonth() + 1).padStart(2, "0");
-      let key = `${y}-${m}`;
+      const d = new Date(Date.UTC(anchor.year, anchor.month - 1 - i, 1));
       monthList.push({
-        key,
-        monthDisplay: d.toLocaleString("default", {
-          month: "short",
-          year: "2-digit",
-        }),
+        key: monthKey(d.getUTCFullYear(), d.getUTCMonth() + 1),
+        monthDisplay: `${MONTH_NAMES[d.getUTCMonth()]} ${String(d.getUTCFullYear()).slice(2)}`,
       });
     }
   }

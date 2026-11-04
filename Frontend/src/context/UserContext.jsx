@@ -1,85 +1,78 @@
-import React, { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { UserContext } from "./UserContextDefinition";
 import axiosInstance from "../utils/axiosInstance";
 import { API_PATHS } from "../utils/apiPath";
+import { clearCache } from "../utils/apiCache";
 
-let UserProvider = ({ children }) => {
-  let [user, setUser] = useState(() => {
-    try {
-      const savedUser = localStorage.getItem("user");
-      return savedUser ? JSON.parse(savedUser) : null;
-    } catch {
-      return null;
-    }
-  });
-  let [loading, setLoading] = useState(() => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    const savedUser = typeof window !== "undefined" ? localStorage.getItem("user") : null;
-    return !!token && !savedUser;
-  });
-  let [selectedMonth, setSelectedMonth] = useState(new Date());
+const readSavedUser = () => {
+  try {
+    const saved = localStorage.getItem("user");
+    return saved ? JSON.parse(saved) : null;
+  } catch {
+    return null;
+  }
+};
+
+const UserProvider = ({ children }) => {
+  const [user, setUser] = useState(readSavedUser);
+  // only block the UI while loading when there is a token but nothing cached to show yet
+  const [loading, setLoading] = useState(() => !!localStorage.getItem("token") && !readSavedUser());
+  const [selectedMonth, setSelectedMonth] = useState(() => new Date());
+
+  const updateUser = useCallback((userData) => {
+    setUser(userData);
+    if (userData) localStorage.setItem("user", JSON.stringify(userData));
+    else localStorage.removeItem("user");
+  }, []);
+
+  // one place that starts a session (email login, sign-up and Google all use it)
+  const login = useCallback(
+    (token, userData) => {
+      clearCache();
+      localStorage.setItem("token", token);
+      updateUser(userData);
+    },
+    [updateUser],
+  );
+
+  const clearUser = useCallback(() => {
+    setUser(null);
+    setSelectedMonth(new Date());
+    clearCache();
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+  }, []);
 
   useEffect(() => {
-    let fetchUserInfo = async () => {
-      let token = localStorage.getItem("token");
-      if (!token) {
+    const fetchUserInfo = async () => {
+      if (!localStorage.getItem("token")) {
         setLoading(false);
         setUser(null);
         return;
       }
 
       try {
-        let response = await axiosInstance.get(API_PATHS.AUTH.GET_USER_INFO);
-        if (response?.data?.data?.user) {
-          setUser(response.data.data.user);
-          localStorage.setItem("user", JSON.stringify(response.data.data.user));
-        }
+        const response = await axiosInstance.get(API_PATHS.AUTH.GET_USER_INFO);
+        const fresh = response?.data?.data?.user;
+        if (fresh) updateUser(fresh);
       } catch (error) {
+        // A 401 is handled by the axios interceptor (it clears the session).
+        // Being offline or a server hiccup must NOT sign the person out.
         console.error("Error fetching user info:", error);
-        // remove token if it's invalid
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        setUser(null);
       } finally {
         setLoading(false);
       }
     };
 
     fetchUserInfo();
-  }, []);
+  }, [updateUser]);
 
-  // update the user state
-  let updateUser = useCallback((userData) => {
-    setUser(userData);
-    if (userData) {
-      localStorage.setItem("user", JSON.stringify(userData));
-    } else {
-      localStorage.removeItem("user");
-    }
-  }, []);
-
-  // remove the user data
-  let clearUser = useCallback(() => {
-    setUser(null);
-    setSelectedMonth(new Date());
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-  }, []);
-
-  return (
-    <UserContext.Provider
-      value={{
-        user,
-        loading,
-        updateUser,
-        clearUser,
-        selectedMonth,
-        setSelectedMonth,
-      }}
-    >
-      {children}
-    </UserContext.Provider>
+  const value = useMemo(
+    () => ({ user, loading, login, updateUser, clearUser, selectedMonth, setSelectedMonth }),
+    [user, loading, login, updateUser, clearUser, selectedMonth],
   );
+
+  return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 };
 
 export default UserProvider;

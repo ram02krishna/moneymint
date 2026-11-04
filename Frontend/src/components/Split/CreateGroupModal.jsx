@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { LuUsers, LuPlus, LuX, LuCheck } from "react-icons/lu";
 import Modal from "../layouts/Modal";
 import { GROUP_CATEGORIES } from "../../utils/splitHelper";
+import {  } from "../../utils/helper";
 
 const CreateGroupModal = ({
   isOpen,
@@ -274,7 +275,7 @@ const CreateGroupModal = ({
                 <button
                   type="button"
                   onClick={addCustomMember}
-                  className="add-btn text-xs py-2 px-3"
+                  className="add-btn"
                 >
                   <LuPlus className="text-sm" /> Add
                 </button>

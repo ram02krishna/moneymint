@@ -1,21 +1,13 @@
-import React, { useState, useEffect } from "react";
-import {
-  LuChartPie,
-  LuChartColumn,
-  LuTrendingUp,
-  LuLayers,
-  LuUsers,
-  LuReceipt,
-} from "react-icons/lu";
-import ChartJsDoughnutChart from "../Charts/ChartJsDoughnutChart";
+import { useState, useEffect } from "react";
+import { LuChartPie, LuTrendingUp, LuLayers, LuUsers, LuReceipt } from "react-icons/lu";
+import ChartJsPieChart from "../Charts/ChartJsPieChart";
 import ChartJsBarChart from "../Charts/ChartJsBarChart";
 import InfoCard from "../Cards/InfoCard";
 import EmptyState from "../ui/EmptyState";
 import LoadingSpinner from "../LoadingSpinner";
 import axiosInstance from "../../utils/axiosInstance";
 import { API_PATHS } from "../../utils/apiPath";
-import { formatCurrency } from "../../utils/splitHelper";
-import { addThousandsSeparator } from "../../utils/helper";
+import { addThousandsSeparator, formatCurrency } from "../../utils/helper";
 
 const SplitAnalyticsView = () => {
   const [loading, setLoading] = useState(true);
@@ -72,7 +64,7 @@ const SplitAnalyticsView = () => {
   return (
     <div className="space-y-6">
       {/* Top Highlights Banner */}
-      <div className="stagger-children flex md:grid md:grid-cols-3 gap-6 mb-8 overflow-x-auto md:overflow-x-visible pb-4 md:pb-0 no-scrollbar snap-x snap-mandatory">
+      <div className="stagger-children stat-grid stat-grid-3 mb-8">
         <InfoCard
           icon={<LuReceipt />}
           label="Total Shared Spending"
@@ -115,7 +107,7 @@ const SplitAnalyticsView = () => {
             </h3>
           </div>
           <div className="h-64 relative">
-            <ChartJsDoughnutChart data={categoryDistribution} />
+            <ChartJsPieChart donut data={categoryDistribution} />
           </div>
         </div>
 

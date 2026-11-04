@@ -1,136 +1,122 @@
-import moment from "moment";
+import { formatDate } from "./helper";
 
-// function to create a pdf with on-demand lazy loading of heavy PDF libraries
-export let generatePDF = async (
-  title,
-  transactions,
-  chartIds = [],
-  type = "income",
-) => {
-  const [{ default: jsPDF }, autoTableModule, { default: html2canvas }] =
-    await Promise.all([
-      import("jspdf"),
-      import("jspdf-autotable"),
-      import("html2canvas"),
-    ]);
+// jsPDF's built-in fonts have no ₹ glyph (it prints as "¹"), so the PDF spells it "Rs."
+const pdfMoney = (value) =>
+  `Rs. ${Number(value || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+const TABLE_COLORS = {
+  income: [34, 197, 94],
+  expense: [220, 38, 38],
+  transaction: [124, 58, 237],
+};
+
+const kindOf = (item, fallback) => item.type || (item.source ? "income" : fallback);
+
+/**
+ * Builds and downloads a PDF report.
+ * type: "income" | "expense" for single-kind reports, "transaction" for a mixed list
+ * (items then carry their own `type`, and the total is shown as a net amount).
+ * The PDF libraries are loaded on demand because they are heavy.
+ */
+export const generatePDF = async (title, transactions, chartIds = [], type = "income") => {
+  const [{ default: jsPDF }, autoTableModule, { default: html2canvas }] = await Promise.all([
+    import("jspdf"),
+    import("jspdf-autotable"),
+    import("html2canvas"),
+  ]);
 
   const autoTable = autoTableModule.default || autoTableModule;
-  let doc = new jsPDF();
-  let tableColumn = ["Date", "Description", "Category/Source", "Amount"];
-  let tableRows = [];
+  const doc = new jsPDF();
+  const isMixed = type === "transaction";
 
-  for (let i = 0; i < transactions.length; i++) {
-    let item = transactions[i];
-    let rowData = [
-      moment(item.date).format("DD/MM/YYYY"),
+  const signed = (item) => {
+    const amount = Number(item.amount) || 0;
+    return kindOf(item, type) === "expense" ? -amount : amount;
+  };
+
+  const rows = transactions.map((item) => {
+    const amount = isMixed ? signed(item) : Number(item.amount) || 0;
+    return [
+      formatDate(item.date),
       item.title,
-      item.category || item.source,
-      new Intl.NumberFormat("en-IN", {
-        style: "currency",
-        currency: "INR",
-      }).format(item.amount),
+      item.category || item.source || "",
+      `${isMixed && amount > 0 ? "+" : ""}${pdfMoney(amount)}`,
     ];
-    tableRows.push(rowData);
-  }
+  });
 
   doc.setFontSize(20);
   doc.setTextColor(40, 40, 40);
   doc.text(title, 14, 20);
 
   doc.setFontSize(10);
-  doc.text(`Generated on: ${moment().format("MMM Do, YYYY h:mm A")}`, 14, 27);
+  doc.text(`Generated on: ${new Date().toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}`, 14, 27);
 
-  // total amount
-  let totalAmount = 0;
-  for (let i = 0; i < transactions.length; i++) {
-    totalAmount += Number(transactions[i].amount);
-  }
+  const total = isMixed
+    ? transactions.reduce((sum, item) => sum + signed(item), 0)
+    : transactions.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+  const totalLabel = isMixed ? "Net Total" : type === "income" ? "Total Income" : "Total Expense";
 
   doc.setFontSize(12);
-  let typeText = type === "income" ? "Income" : "Expense";
-  doc.text(
-    `Total ${typeText}: ${new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(totalAmount)}`,
-    14,
-    35,
-  );
+  doc.text(`${totalLabel}: ${pdfMoney(total)}`, 14, 35);
 
   let finalY = 40;
 
-  // get the charts
   if (chartIds.length > 0) {
     doc.text("Analytics Snapshot", 14, finalY);
     finalY += 5;
 
-    for (let i = 0; i < chartIds.length; i++) {
-      let id = chartIds[i];
-      let chartElement = document.getElementById(id);
-      if (chartElement) {
-        try {
-          let canvas = await html2canvas(chartElement, {
-            scale: 2,
-            useCORS: true,
-            backgroundColor: "#ffffff",
-            onclone: (clonedDoc) => {
-              let element = clonedDoc.getElementById(id);
-              if (element) {
-                element.style.backgroundColor = "#ffffff";
-                element.style.color = "#000000";
-              }
-            },
-          });
-          let imgData = canvas.toDataURL("image/png");
+    for (const id of chartIds) {
+      const chartElement = document.getElementById(id);
+      if (!chartElement) continue;
 
-          let imgWidth = 180;
-          let imgHeight = (canvas.height * imgWidth) / canvas.width;
+      try {
+        const canvas = await html2canvas(chartElement, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: "#ffffff",
+          onclone: (clonedDoc) => {
+            const element = clonedDoc.getElementById(id);
+            if (element) {
+              element.style.backgroundColor = "#ffffff";
+              element.style.color = "#000000";
+            }
+          },
+        });
 
-          if (finalY + imgHeight > 280) {
-            doc.addPage();
-            finalY = 20;
-          }
+        const imgWidth = 180;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-          doc.addImage(imgData, "PNG", 14, finalY, imgWidth, imgHeight);
-          finalY += imgHeight + 10;
-        } catch (err) {
-          console.error("Error generating PDF chart:", err);
-          doc.setFontSize(10);
-          doc.setTextColor(255, 0, 0);
-          doc.text(`(Chart capture failed: ${err.message})`, 14, finalY + 10);
-          finalY += 20;
-          doc.setTextColor(40, 40, 40);
+        if (finalY + imgHeight > 280) {
+          doc.addPage();
+          finalY = 20;
         }
+
+        doc.addImage(canvas.toDataURL("image/png"), "PNG", 14, finalY, imgWidth, imgHeight);
+        finalY += imgHeight + 10;
+      } catch (err) {
+        console.error("Error generating PDF chart:", err);
       }
     }
   }
 
-  // make table
   if (finalY > 250) {
     doc.addPage();
     finalY = 20;
   }
 
+  doc.setFontSize(12);
   doc.text("Transaction Details", 14, finalY);
 
-  let tableColor = [124, 58, 237];
-  if (type === "income") {
-    tableColor = [34, 197, 94];
-  } else if (type === "expense") {
-    tableColor = [220, 38, 38];
-  }
-
   autoTable(doc, {
-    head: [tableColumn],
-    body: tableRows,
+    head: [["Date", "Description", "Category/Source", "Amount"]],
+    body: rows,
     startY: finalY + 5,
     theme: "grid",
     styles: { fontSize: 9 },
-    headStyles: {
-      fillColor: tableColor,
-      textColor: [255, 255, 255],
-    },
+    columnStyles: { 3: { halign: "right" } },
+    headStyles: { fillColor: TABLE_COLORS[type] || TABLE_COLORS.transaction, textColor: [255, 255, 255] },
   });
 
-  // Save pdf file
-  doc.save(
-    `${title.replace(/\s+/g, "_")}_${moment().format("DD-MM-YYYY")}.pdf`,
-  );
+  const stamp = formatDate(new Date()).replace(/\//g, "-");
+  doc.save(`${title.replace(/\s+/g, "_")}_${stamp}.pdf`);
 };

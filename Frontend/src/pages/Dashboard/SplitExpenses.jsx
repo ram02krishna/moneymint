@@ -1,26 +1,5 @@
-import React, { useState, useEffect, useCallback, useContext } from "react";
-import {
-  LuUsers,
-  LuPlus,
-  LuHandCoins,
-  LuUserPlus,
-  LuArrowRightLeft,
-  LuReceipt,
-  LuChartPie,
-  LuActivity,
-  LuTrendingUp,
-  LuTrendingDown,
-  LuCheck,
-  LuSearch,
-  LuFilter,
-  LuPencil,
-  LuTrash2,
-  LuCalendar,
-  LuCreditCard,
-  LuSparkles,
-  LuClock,
-  LuWallet,
-} from "react-icons/lu";
+import { useState, useEffect, useCallback, useContext } from "react";
+import { LuUsers, LuPlus, LuHandCoins, LuUserPlus, LuArrowRight, LuArrowRightLeft, LuReceipt, LuChartPie, LuActivity, LuTrendingUp, LuTrendingDown, LuSearch, LuFilter, LuPencil, LuTrash2, LuClock, LuWallet } from "react-icons/lu";
 import DashboardLayout from "../../components/layouts/DashboardLayout";
 import PageHeader from "../../components/ui/PageHeader";
 import EmptyState from "../../components/ui/EmptyState";
@@ -38,9 +17,9 @@ import SplitAnalyticsView from "../../components/Split/SplitAnalyticsView";
 import axiosInstance from "../../utils/axiosInstance";
 import { API_PATHS } from "../../utils/apiPath";
 import { useToast } from "../../hooks/useToast";
+import { useConfirm } from "../../hooks/useConfirm";
 import { UserContext } from "../../context/UserContextDefinition";
-import { formatCurrency, emojiFor } from "../../utils/splitHelper";
-import { addThousandsSeparator } from "../../utils/helper";
+import { addThousandsSeparator, formatCurrency, emojiFor } from "../../utils/helper";
 
 const TABS = [
   { id: "dashboard", label: "Dashboard", icon: LuArrowRightLeft },
@@ -54,6 +33,7 @@ const TABS = [
 
 const SplitExpenses = () => {
   const toast = useToast();
+  const confirm = useConfirm();
   const { user } = useContext(UserContext);
 
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -279,7 +259,7 @@ const SplitExpenses = () => {
               <button
                 type="button"
                 onClick={() => openSettleUpWith(null, 0)}
-                className="add-btn"
+                className="add-btn add-btn-fill"
               >
                 <LuHandCoins className="text-base" /> Settle Up
               </button>
@@ -289,21 +269,21 @@ const SplitExpenses = () => {
                   setEditingGroup(null);
                   setIsCreateGroupOpen(true);
                 }}
-                className="card-btn"
+                className="add-btn add-btn-fill"
               >
                 <LuUsers className="text-base" /> New Group
               </button>
               <button
                 type="button"
                 onClick={() => setIsAddFriendOpen(true)}
-                className="card-btn"
+                className="add-btn add-btn-fill"
               >
                 <LuUserPlus className="text-base" /> Add Friend
               </button>
             </PageHeader>
 
             {/* Top Stat Cards matching Expense Tracker design */}
-            <div className="stagger-children flex lg:grid lg:grid-cols-4 gap-6 mb-8 overflow-x-auto lg:overflow-x-visible pb-4 lg:pb-0 no-scrollbar snap-x snap-mandatory">
+            <div className="stagger-children stat-grid stat-grid-4 mb-8">
               <InfoCard
                 icon={<LuWallet />}
                 label="Total balance"
@@ -429,9 +409,9 @@ const SplitExpenses = () => {
                         <button
                           type="button"
                           onClick={() => setActiveTab("groups")}
-                          className="text-xs font-semibold text-purple-600 hover:underline cursor-pointer"
+                          className="card-btn"
                         >
-                          View all →
+                          View all <LuArrowRight aria-hidden="true" />
                         </button>
                       </div>
 
@@ -446,7 +426,7 @@ const SplitExpenses = () => {
                               setEditingGroup(null);
                               setIsCreateGroupOpen(true);
                             }}
-                            className="add-btn add-btn-fill text-xs py-1.5 px-4 mt-3 inline-flex items-center gap-1 mx-auto"
+                            className="add-btn add-btn-fill mt-3 mx-auto"
                           >
                             <LuPlus className="text-sm" /> Create First Group
                           </button>
@@ -507,9 +487,9 @@ const SplitExpenses = () => {
                         <button
                           type="button"
                           onClick={() => setActiveTab("friends")}
-                          className="text-xs font-semibold text-purple-600 hover:underline cursor-pointer"
+                          className="card-btn"
                         >
-                          View all →
+                          View all <LuArrowRight aria-hidden="true" />
                         </button>
                       </div>
 
@@ -521,7 +501,7 @@ const SplitExpenses = () => {
                           <button
                             type="button"
                             onClick={() => setIsAddFriendOpen(true)}
-                            className="add-btn add-btn-fill text-xs py-1.5 px-4 mt-3 inline-flex items-center gap-1 mx-auto"
+                            className="add-btn add-btn-fill mt-3 mx-auto"
                           >
                             <LuPlus className="text-sm" /> Add First Friend
                           </button>
@@ -570,7 +550,7 @@ const SplitExpenses = () => {
                                       e.stopPropagation();
                                       openSettleUpWith(fr, bal);
                                     }}
-                                    className="add-btn text-[10px] py-1 px-2 shrink-0"
+                                    className="add-btn shrink-0"
                                   >
                                     Settle
                                   </button>
@@ -592,9 +572,9 @@ const SplitExpenses = () => {
                         <button
                           type="button"
                           onClick={() => setActiveTab("expenses")}
-                          className="text-xs font-semibold text-purple-600 hover:underline cursor-pointer"
+                          className="card-btn"
                         >
-                          View all ({expenses.length}) →
+                          View all ({expenses.length}) <LuArrowRight aria-hidden="true" />
                         </button>
                       </div>
 
@@ -610,7 +590,7 @@ const SplitExpenses = () => {
                                 setEditingExpense(null);
                                 setIsAddExpenseOpen(true);
                               }}
-                              className="add-btn add-btn-fill text-xs py-2 px-5 inline-flex items-center gap-1"
+                              className="add-btn add-btn-fill"
                             >
                               <LuPlus className="text-sm" /> Add Expense
                             </button>
@@ -684,7 +664,7 @@ const SplitExpenses = () => {
                           setEditingGroup(null);
                           setIsCreateGroupOpen(true);
                         }}
-                        className="add-btn add-btn-fill text-xs py-2 px-4 inline-flex items-center gap-1.5"
+                        className="add-btn add-btn-fill"
                       >
                         <LuPlus className="text-sm" /> Create Group
                       </button>
@@ -702,7 +682,7 @@ const SplitExpenses = () => {
                               setEditingGroup(null);
                               setIsCreateGroupOpen(true);
                             }}
-                            className="add-btn add-btn-fill text-xs py-2 px-5 inline-flex items-center gap-1.5"
+                            className="add-btn add-btn-fill"
                           >
                             <LuPlus className="text-sm" /> Create Group
                           </button>
@@ -781,7 +761,7 @@ const SplitExpenses = () => {
                       <button
                         type="button"
                         onClick={() => setIsAddFriendOpen(true)}
-                        className="add-btn add-btn-fill text-xs py-2 px-4 inline-flex items-center gap-1.5"
+                        className="add-btn add-btn-fill"
                       >
                         <LuUserPlus className="text-sm" /> Add Friend
                       </button>
@@ -796,7 +776,7 @@ const SplitExpenses = () => {
                           <button
                             type="button"
                             onClick={() => setIsAddFriendOpen(true)}
-                            className="add-btn add-btn-fill text-xs py-2 px-5 inline-flex items-center gap-1.5"
+                            className="add-btn add-btn-fill"
                           >
                             <LuUserPlus className="text-sm" /> Add Friend
                           </button>
@@ -859,7 +839,7 @@ const SplitExpenses = () => {
                                       e.stopPropagation();
                                       openSettleUpWith(fr, bal);
                                     }}
-                                    className="add-btn text-[10px] py-1 px-2.5"
+                                    className="add-btn"
                                   >
                                     Settle
                                   </button>
@@ -923,7 +903,7 @@ const SplitExpenses = () => {
                               setEditingExpense(null);
                               setIsAddExpenseOpen(true);
                             }}
-                            className="add-btn add-btn-fill text-xs py-2 px-5 inline-flex items-center gap-1.5"
+                            className="add-btn add-btn-fill"
                           >
                             <LuPlus className="text-sm" /> Add New Expense
                           </button>
@@ -1000,12 +980,14 @@ const SplitExpenses = () => {
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={(e) => {
+                                  onClick={async (e) => {
                                     e.stopPropagation();
                                     if (
-                                      window.confirm(
-                                        `Delete expense "${exp.title}"?`,
-                                      )
+                                      await confirm({
+                                        title: "Delete expense?",
+                                        message: `"${exp.title}" will be removed for everyone in it.`,
+                                        confirmLabel: "Delete",
+                                      })
                                     ) {
                                       handleDeleteExpense(exp._id);
                                     }
@@ -1034,7 +1016,7 @@ const SplitExpenses = () => {
                       <button
                         type="button"
                         onClick={() => openSettleUpWith(null, 0)}
-                        className="add-btn add-btn-fill text-xs py-2 px-4 inline-flex items-center gap-1.5"
+                        className="add-btn add-btn-fill"
                       >
                         <LuHandCoins className="text-sm" /> Record Payment
                       </button>
@@ -1049,7 +1031,7 @@ const SplitExpenses = () => {
                           <button
                             type="button"
                             onClick={() => openSettleUpWith(null, 0)}
-                            className="add-btn add-btn-fill text-xs py-2 px-5 inline-flex items-center gap-1.5"
+                            className="add-btn add-btn-fill"
                           >
                             <LuHandCoins className="text-sm" /> Record Settlement
                           </button>

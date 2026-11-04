@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { LuPiggyBank, LuArrowRight, LuTriangleAlert } from "react-icons/lu";
 import ProgressBar from "../ui/ProgressBar";
@@ -74,7 +74,7 @@ const BudgetSnapshot = () => {
             No active budgets. Set a limit for a category and we&apos;ll track it for you.
           </p>
           <button
-            className="add-btn add-btn-fill !text-white"
+            className="add-btn add-btn-fill"
             onClick={() => navigate("/budgets", { state: { openAdd: true } })}
           >
             Create a budget

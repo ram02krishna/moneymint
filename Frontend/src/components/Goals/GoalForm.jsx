@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { toInputDate } from "../../utils/helper";
+import ModernDatePicker from "../Inputs/ModernDatePicker";
 
 const ICONS = ["🎯", "🏠", "🚗", "✈️", "💻", "📱", "🎓", "💍", "🏖️", "🛡️", "🎁", "💰"];
 
@@ -23,6 +24,8 @@ const GoalForm = ({ onSave, onCancel, editingData = null }) => {
     if (!form.title.trim()) e.title = "Give your goal a name";
     if (!form.targetAmount || Number(form.targetAmount) < 1)
       e.targetAmount = "Target must be at least ₹1";
+    const unchanged = editingData?.deadline && form.deadline === toInputDate(editingData.deadline);
+    if (form.deadline && form.deadline < toInputDate() && !unchanged) e.deadline = "Target date can't be in the past";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -99,29 +102,22 @@ const GoalForm = ({ onSave, onCancel, editingData = null }) => {
             <p className="field-error">{errors.targetAmount}</p>
           )}
         </div>
-        <div>
-          <label className="field-label" htmlFor="g-deadline">
-            Target date <span className="font-normal text-gray-400">(optional)</span>
-          </label>
-          <input
-            id="g-deadline"
-            type="date"
-            className="input-box"
-            min={toInputDate()}
-            value={form.deadline}
-            onChange={(e) => set("deadline", e.target.value)}
-          />
-        </div>
+        <ModernDatePicker
+          label={<>Target date <span className="font-normal text-gray-400">(optional)</span></>}
+          value={form.deadline}
+          onChange={(e) => set("deadline", e.target.value)}
+          error={errors.deadline}
+        />
       </div>
 
       <div className="flex justify-end gap-3 mt-2">
-        <button type="button" className="card-btn !px-5 !py-3" onClick={onCancel}>
+        <button type="button" className="btn-secondary" onClick={onCancel}>
           Cancel
         </button>
         <button
           type="submit"
           disabled={saving}
-          className="btn-primary !w-auto !my-0 disabled:opacity-60"
+          className="btn-primary !w-auto !my-0"
         >
           {saving ? "Saving..." : editingData ? "Update goal" : "Create goal"}
         </button>

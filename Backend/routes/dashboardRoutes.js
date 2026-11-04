@@ -3,7 +3,6 @@ const rateLimit = require("express-rate-limit");
 const { Protect } = require("../middleware/authMiddleware");
 const {
   getDashboardSummary,
-  getDashboardExpenseSummary,
   getMonthlyDashboardSummary,
   getMonthlyExpenses,
   getMonthlyIncome,
@@ -25,9 +24,6 @@ router.use(dashboardLimiter);
 
 // get dashboard summary
 router.get("/", Protect, getDashboardSummary);
-
-// get expenses by category
-router.get("/expense-summary-by-category", Protect, getDashboardExpenseSummary);
 
 // get monthly summary
 router.get("/monthly-summary", Protect, getMonthlyDashboardSummary);

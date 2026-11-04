@@ -6,50 +6,45 @@ const asyncHandler = require("../utils/asyncHandler");
 const AppError = require("../utils/AppError");
 const { validateObjectId } = require("../utils/queryValidator");
 
-// create a budget
-exports.createBudget = asyncHandler(async (req, res, next) => {
-  let { category, amount, startDate, endDate, isRecurring, recurrenceType } =
-    req.body;
+const ALLOWED_FIELDS = ["category", "amount", "startDate", "endDate", "isRecurring", "recurrenceType"];
 
-  // get total income
-  let incAgg = await Income.aggregate([
-    { $match: { user: new mongoose.Types.ObjectId(req.user.id) } },
-    { $group: { _id: null, total: { $sum: "$amount" } } },
-  ]);
-  let totalIncome = incAgg.length > 0 ? incAgg[0].total : 0;
+const sumFor = async (Model, match) => {
+  const [row] = await Model.aggregate([{ $match: match }, { $group: { _id: null, total: { $sum: "$amount" } } }]);
+  return row ? row.total : 0;
+};
 
-  // get total budgets
-  let budAgg = await Budget.aggregate([
-    { $match: { user: new mongoose.Types.ObjectId(req.user.id) } },
-    { $group: { _id: null, total: { $sum: "$amount" } } },
-  ]);
-  let totalBudgets = budAgg.length > 0 ? budAgg[0].total : 0;
+// Total of all budgets must stay within total income (the rule the app has always applied).
+const assertWithinIncome = async (userId, amount, excludeId) => {
+  const user = new mongoose.Types.ObjectId(userId);
+  const budgetMatch = { user };
+  if (excludeId) budgetMatch._id = { $ne: new mongoose.Types.ObjectId(excludeId) };
 
-  if (totalBudgets + amount > totalIncome) {
-    return next(
-      new AppError(
-        `Total budget (${totalBudgets + amount}) cannot be more than total income (${totalIncome})`,
-        400,
-      ),
-    );
+  const [totalIncome, otherBudgets] = await Promise.all([sumFor(Income, { user }), sumFor(Budget, budgetMatch)]);
+  const total = otherBudgets + amount;
+
+  if (total > totalIncome) {
+    throw new AppError(`Total budget (${total}) cannot be more than total income (${totalIncome})`, 400);
   }
+};
 
-  let newBud = await Budget.create({
+// create a budget
+exports.createBudget = asyncHandler(async (req, res) => {
+  const { category, startDate, endDate, isRecurring, recurrenceType } = req.body;
+  const amount = Number(req.body.amount);
+
+  await assertWithinIncome(req.user.id, amount);
+
+  const budget = await Budget.create({
     user: req.user.id,
-    category: category,
-    amount: amount,
-    startDate: startDate,
-    endDate: endDate,
-    isRecurring: isRecurring || false,
+    category,
+    amount,
+    startDate,
+    endDate,
+    isRecurring: !!isRecurring,
     recurrenceType: isRecurring ? recurrenceType : null,
   });
 
-  res.status(201).json({
-    status: "success",
-    data: {
-      budget: newBud,
-    },
-  });
+  res.status(201).json({ status: "success", data: { budget } });
 });
 
 // get all budgets
@@ -85,78 +80,39 @@ exports.getBudget = asyncHandler(async (req, res, next) => {
   });
 });
 
-// update budget
+// update budget (only whitelisted fields; the owner can never be changed)
 exports.updateBudget = asyncHandler(async (req, res, next) => {
-  let bId = validateObjectId(req.params.id, "Budget ID");
-  let uId = validateObjectId(req.user.id, "User ID");
+  const bId = validateObjectId(req.params.id, "Budget ID");
+  const uId = validateObjectId(req.user.id, "User ID");
 
-  let { amount } = req.body;
-
-  if (!req.body.isRecurring) {
-    req.body.recurrenceType = null;
-  }
-
-  if (amount !== undefined) {
-    let incAgg = await Income.aggregate([
-      { $match: { user: new mongoose.Types.ObjectId(req.user.id) } },
-      { $group: { _id: null, total: { $sum: "$amount" } } },
-    ]);
-    let totalIncome = incAgg.length > 0 ? incAgg[0].total : 0;
-
-    let budAgg = await Budget.aggregate([
-      {
-        $match: {
-          user: new mongoose.Types.ObjectId(req.user.id),
-          _id: { $ne: new mongoose.Types.ObjectId(bId) },
-        },
-      },
-      { $group: { _id: null, total: { $sum: "$amount" } } },
-    ]);
-    let totalOtherBudgets = budAgg.length > 0 ? budAgg[0].total : 0;
-
-    if (totalOtherBudgets + amount > totalIncome) {
-      return next(
-        new AppError(
-          `Total budget (${totalOtherBudgets + amount}) cannot be more than income (${totalIncome})`,
-          400,
-        ),
-      );
-    }
-  }
-
-  let updatedBudget = await Budget.findOneAndUpdate(
-    { _id: bId, user: uId },
-    req.body,
-    { new: true, runValidators: true },
-  );
-
-  if (!updatedBudget) {
-    return next(new AppError("Cannot find budget to update", 404));
-  }
-
-  res.status(200).json({
-    status: "success",
-    data: {
-      budget: updatedBudget,
-    },
+  const update = {};
+  ALLOWED_FIELDS.forEach((field) => {
+    if (req.body[field] !== undefined) update[field] = req.body[field];
   });
+  if (!update.isRecurring) update.recurrenceType = null;
+
+  if (update.amount !== undefined) {
+    update.amount = Number(update.amount);
+    await assertWithinIncome(req.user.id, update.amount, bId);
+  }
+
+  const budget = await Budget.findOneAndUpdate({ _id: bId, user: uId }, update, {
+    new: true,
+    runValidators: true,
+  });
+  if (!budget) return next(new AppError("Cannot find budget to update", 404));
+
+  res.status(200).json({ status: "success", data: { budget } });
 });
 
 // delete budget
 exports.deleteBudget = asyncHandler(async (req, res, next) => {
-  let bId = validateObjectId(req.params.id, "Budget ID");
-  let uId = validateObjectId(req.user.id, "User ID");
-
-  let deletedBudget = await Budget.findOneAndDelete({ _id: bId, user: uId });
-
-  if (!deletedBudget) {
-    return next(new AppError("Cannot find budget to delete", 404));
-  }
-
-  res.status(204).json({
-    status: "success",
-    data: null,
+  const deleted = await Budget.findOneAndDelete({
+    _id: validateObjectId(req.params.id, "Budget ID"),
+    user: validateObjectId(req.user.id, "User ID"),
   });
+  if (!deleted) return next(new AppError("Cannot find budget to delete", 404));
+  res.status(204).end();
 });
 
 // compare budget and actual expenses

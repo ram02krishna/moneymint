@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import * as SecureStore from "expo-secure-store";
 import client, { setAuthToken, setUnauthorizedHandler } from "../api/client";
 import { API_PATHS } from "../api/paths";

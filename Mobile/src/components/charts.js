@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { PanResponder, Pressable, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Svg, { Circle, G, Line, Path, Rect, Text as SvgText } from "react-native-svg";

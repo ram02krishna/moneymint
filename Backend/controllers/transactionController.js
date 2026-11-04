@@ -2,138 +2,76 @@ const mongoose = require("mongoose");
 const Income = require("../models/Income");
 const Expense = require("../models/Expense");
 const asyncHandler = require("../utils/asyncHandler");
-const ExcelJS = require("exceljs");
+const { parseMonth } = require("../utils/dateRange");
+const { parsePagination } = require("../utils/pagination");
+const { sendWorkbook, DATE_FORMAT } = require("../utils/excel");
 
-// get all my transactions
+// get all my transactions (income + expenses merged, newest first)
 exports.getAllTransactions = asyncHandler(async (req, res) => {
-  let pageNo = parseInt(req.query.page) || 1;
-  let limitVal = parseInt(req.query.limit) || 10;
-  let skipVal = (pageNo - 1) * limitVal;
-
-  let myMatchQuery = { user: new mongoose.Types.ObjectId(req.user.id) };
-  let expenseQuery = { user: new mongoose.Types.ObjectId(req.user.id) };
-
-  let month = req.query.month;
-  if (month) {
-    let parts = month.split("-");
-    let year = parts[0];
-    let monthNum = parts[1];
-
-    if (year && monthNum && !isNaN(year) && !isNaN(monthNum)) {
-      let startDate = new Date(year, monthNum - 1, 1);
-      let endDate = new Date(year, monthNum, 0, 23, 59, 59, 999);
-      myMatchQuery.date = { $gte: startDate, $lte: endDate }; //gte -> greater than or equal to , lte -> less than equal to
-      expenseQuery.date = { $gte: startDate, $lte: endDate };
-    }
+  const { page, limit, skip } = parsePagination(req.query);
+  const userMatch = { user: new mongoose.Types.ObjectId(req.user.id) };
+  if (req.query.month) {
+    const { start, end } = parseMonth(req.query.month);
+    userMatch.date = { $gte: start, $lte: end };
   }
 
-  let myPipeline = [
-    { $match: myMatchQuery },
+  const [result] = await Income.aggregate([
+    { $match: userMatch },
     { $addFields: { type: "income" } },
     {
       $unionWith: {
-        coll: "expenses",
-        pipeline: [
-          { $match: expenseQuery },
-          { $addFields: { type: "expense" } },
-        ],
+        coll: Expense.collection.name,
+        pipeline: [{ $match: userMatch }, { $addFields: { type: "expense" } }],
       },
     },
     { $sort: { date: -1 } },
     {
       $facet: {
         metadata: [{ $count: "total" }],
-        data: [{ $skip: skipVal }, { $limit: limitVal }],
+        data: [{ $skip: skip }, { $limit: limit }],
       },
     },
-  ];
+  ]);
 
-  let result = await Income.aggregate(myPipeline);
-
-  let allTransactions = result[0].data;
-  let totalCount = result[0].metadata[0] ? result[0].metadata[0].total : 0;
-  let totalPages = Math.ceil(totalCount / limitVal);
+  const total = result.metadata[0]?.total || 0;
 
   res.status(200).json({
     status: "success",
-    results: allTransactions.length,
-    pagination: {
-      total: totalCount,
-      page: pageNo,
-      limit: limitVal,
-      totalPages: totalPages,
-    },
-    data: {
-      transactions: allTransactions,
-    },
+    results: result.data.length,
+    pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    data: { transactions: result.data },
   });
 });
 
-// download all transactions in excel format
+// download transactions (optionally just one month) as Excel
 exports.downloadTransactionsExcel = asyncHandler(async (req, res) => {
-  let incomeQ = { user: req.user.id };
-  let expenseQ = { user: req.user.id };
-
-  let month = req.query.month;
-  if (month) {
-    let parts = month.split("-");
-    let year = parts[0];
-    let monthNum = parts[1];
-
-    if (year && monthNum && !isNaN(year) && !isNaN(monthNum)) {
-      let startDate = new Date(year, monthNum - 1, 1);
-      let endDate = new Date(year, monthNum, 0, 23, 59, 59, 999);
-      incomeQ.date = { $gte: startDate, $lte: endDate };
-      expenseQ.date = { $gte: startDate, $lte: endDate };
-    }
+  const query = { user: req.user.id };
+  if (req.query.month) {
+    const { start, end } = parseMonth(req.query.month);
+    query.date = { $gte: start, $lte: end };
   }
 
-  let myIncomes = await Income.find(incomeQ).lean();
-  let myExpenses = await Expense.find(expenseQ).lean();
+  const [incomes, expenses] = await Promise.all([
+    Income.find(query).lean(),
+    Expense.find(query).lean(),
+  ]);
 
-  let allTransactions = [];
-  for (let i = 0; i < myIncomes.length; i++) {
-    allTransactions.push(myIncomes[i]);
-  }
-  for (let i = 0; i < myExpenses.length; i++) {
-    allTransactions.push(myExpenses[i]);
-  }
+  const rows = [
+    ...incomes.map((t) => ({ date: t.date, type: "Income", title: t.title, categorySource: t.source, description: t.note, amount: t.amount })),
+    ...expenses.map((t) => ({ date: t.date, type: "Expense", title: t.title, categorySource: t.category, description: t.description, amount: t.amount })),
+  ].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-  allTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-  let wb = new ExcelJS.Workbook();
-  let ws = wb.addWorksheet("Transactions");
-
-  ws.columns = [
-    { header: "Date", key: "date", width: 15 },
-    { header: "Type", key: "type", width: 10 },
-    { header: "Category/Source", key: "categorySource", width: 25 },
-    { header: "Description", key: "description", width: 30 },
-    { header: "Amount", key: "amount", width: 15 },
-  ];
-
-  for (let i = 0; i < allTransactions.length; i++) {
-    let t = allTransactions[i];
-    let type = t.source ? "Income" : "Expense";
-    let catSource = t.source || t.category;
-    ws.addRow({
-      date: new Date(t.date).toLocaleDateString(),
-      type: type,
-      categorySource: catSource,
-      description: t.description,
-      amount: t.amount,
-    });
-  }
-
-  res.setHeader(
-    "Content-Type",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  );
-  res.setHeader(
-    "Content-Disposition",
-    "attachment; filename=" + "transactions.xlsx",
-  );
-
-  await wb.xlsx.write(res);
-  res.end();
+  await sendWorkbook(res, {
+    sheetName: "Transactions",
+    filename: "transactions.xlsx",
+    columns: [
+      { header: "Date", key: "date", width: 14, style: { numFmt: DATE_FORMAT } },
+      { header: "Type", key: "type", width: 10 },
+      { header: "Title", key: "title", width: 28 },
+      { header: "Category/Source", key: "categorySource", width: 24 },
+      { header: "Description", key: "description", width: 32 },
+      { header: "Amount", key: "amount", width: 14 },
+    ],
+    rows,
+  });
 });

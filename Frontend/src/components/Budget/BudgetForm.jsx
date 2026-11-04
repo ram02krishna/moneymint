@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { LuRepeat } from "react-icons/lu";
 import { toInputDate } from "../../utils/helper";
+import ModernDatePicker from "../Inputs/ModernDatePicker";
 
 const DEFAULT_CATEGORIES = [
   "Food",
@@ -148,32 +149,8 @@ const BudgetForm = ({ onSave, onCancel, editingData = null, categories = [] }) =
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
-        <div>
-          <label className="field-label" htmlFor="b-start">
-            Start date
-          </label>
-          <input
-            id="b-start"
-            type="date"
-            className="input-box"
-            value={form.startDate}
-            onChange={(e) => set("startDate", e.target.value)}
-          />
-          {errors.startDate && <p className="field-error">{errors.startDate}</p>}
-        </div>
-        <div>
-          <label className="field-label" htmlFor="b-end">
-            End date
-          </label>
-          <input
-            id="b-end"
-            type="date"
-            className="input-box"
-            value={form.endDate}
-            onChange={(e) => set("endDate", e.target.value)}
-          />
-          {errors.endDate && <p className="field-error">{errors.endDate}</p>}
-        </div>
+        <ModernDatePicker label="Start date" value={form.startDate} onChange={(e) => set("startDate", e.target.value)} error={errors.startDate} />
+        <ModernDatePicker label="End date" value={form.endDate} onChange={(e) => set("endDate", e.target.value)} error={errors.endDate} />
       </div>
 
       <div className="flex flex-wrap items-center gap-4 mb-6 p-4 rounded-xl bg-gray-50 dark:bg-gray-700/40 border border-gray-100 dark:border-gray-700">
@@ -202,13 +179,13 @@ const BudgetForm = ({ onSave, onCancel, editingData = null, categories = [] }) =
       </div>
 
       <div className="flex justify-end gap-3">
-        <button type="button" className="card-btn !px-5 !py-3" onClick={onCancel}>
+        <button type="button" className="btn-secondary" onClick={onCancel}>
           Cancel
         </button>
         <button
           type="submit"
           disabled={saving}
-          className="btn-primary !w-auto !my-0 disabled:opacity-60"
+          className="btn-primary !w-auto !my-0"
         >
           {saving ? "Saving..." : editingData ? "Update budget" : "Create budget"}
         </button>

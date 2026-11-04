@@ -3,7 +3,8 @@ import { LuHandCoins, LuCalendar, LuFileText, LuCreditCard } from "react-icons/l
 import Modal from "../layouts/Modal";
 import ModernDatePicker from "../Inputs/ModernDatePicker";
 import { UserContext } from "../../context/UserContextDefinition";
-import { PAYMENT_METHODS, formatCurrency } from "../../utils/splitHelper";
+import { PAYMENT_METHODS } from "../../utils/splitHelper";
+import { formatCurrency } from "../../utils/helper";
 
 const SettleUpModal = ({
   isOpen,
@@ -109,12 +110,12 @@ const SettleUpModal = ({
     const payload = {
       group: selectedGroupId || null,
       payer: {
-        user: payerPerson.user || (payerPerson.id !== "currentUser" ? payerPerson.id : user?._id),
+        user: payerPerson.user || null,
         name: payerPerson.name.replace(" (You)", ""),
         email: payerPerson.email,
       },
       payee: {
-        user: payeePerson.user || payeePerson.id,
+        user: payeePerson.user || null,
         name: payeePerson.name.replace(" (You)", ""),
         email: payeePerson.email,
       },
@@ -258,8 +259,6 @@ const SettleUpModal = ({
               label={null}
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              colorTheme="purple"
-              inputClassName="py-2.5 h-11"
             />
           </div>
         </div>

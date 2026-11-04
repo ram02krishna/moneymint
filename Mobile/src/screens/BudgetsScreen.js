@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Switch, Text, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "../theme";

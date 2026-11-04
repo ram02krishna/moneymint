@@ -35,116 +35,86 @@
   --color-pink-500: #ed64a6;
   --color-pink-600: #d53f8c;
 
-  --shadow-soft: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
-  --shadow-glow: 0 0 15px rgba(124, 58, 237, 0.3);
-
   --animate-blob: blob 7s infinite;
-  --animate-fade-up: fadeUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
-  --animate-fade-in: fadeIn 0.3s ease both;
-  --animate-scale-in: scaleIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
-  --animate-slide-in-right: slideInRight 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
-  --animate-shimmer: shimmer 1.6s linear infinite;
+}
 
-  @keyframes blob {
-    0% {
-      transform: translate(0px, 0px) scale(1);
-    }
-
-    33% {
-      transform: translate(30px, -50px) scale(1.1);
-    }
-
-    66% {
-      transform: translate(-20px, 20px) scale(0.9);
-    }
-
-    100% {
-      transform: translate(0px, 0px) scale(1);
-    }
+/* Keyframes live outside @theme so each one is defined exactly once */
+@keyframes blob {
+  0% {
+    transform: translate(0px, 0px) scale(1);
   }
 
-  @keyframes fadeUp {
-    from {
-      opacity: 0;
-      transform: translateY(18px);
-    }
-
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
   }
 
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-    }
-
-    to {
-      opacity: 1;
-    }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
   }
 
-  @keyframes scaleIn {
-    from {
-      opacity: 0;
-      transform: scale(0.94);
-    }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
 
-    to {
-      opacity: 1;
-      transform: scale(1);
-    }
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
   }
 
-  @keyframes slideInRight {
-    from {
-      opacity: 0;
-      transform: translateX(24px);
-    }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
-    to {
-      opacity: 1;
-      transform: translateX(0);
-    }
+@keyframes fadeIn {
+  from {
+    opacity: 0;
   }
 
-  @keyframes shimmer {
-    0% {
-      background-position: -400px 0;
-    }
+  to {
+    opacity: 1;
+  }
+}
 
-    100% {
-      background-position: 400px 0;
-    }
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
   }
 
-  @keyframes pulse-ring {
-    0% {
-      transform: scale(0.8);
-      opacity: 0.8;
-    }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
 
-    70% {
-      transform: scale(1.3);
-      opacity: 0;
-    }
+@keyframes shimmer {
+  0% {
+    background-position: -400px 0;
+  }
 
-    100% {
-      transform: scale(1.3);
-      opacity: 0;
-    }
+  100% {
+    background-position: 400px 0;
   }
 }
 
 :root {
-  --font-display: "Plus Jakarta Sans", "sans-serif";
-  --breakpoint-3xl: 1920px;
-
   /* Light Theme Colors */
   --background-color: #f8fafc;
   --text-color: #1e293b;
-  --primary-color: #7c3aed;
+
+  /* Shared action button styles */
+  --button-min-height: 2.5rem;
+  --button-padding-block: 0.5rem;
+  --button-padding-inline: 0.875rem;
+  --button-gap: 0.5rem;
+  --button-radius: 0.75rem;
+  --button-font-size: 0.875rem;
+  --button-font-weight: 600;
+  --button-line-height: 1.25rem;
 
   /* Animation timing shared */
   --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
@@ -155,7 +125,6 @@
 .dark {
   --background-color: #0f172a;
   --text-color: #e2e8f0;
-  --primary-color: #8b5cf6;
 }
 
 @layer base {
@@ -215,42 +184,58 @@
 
   /* ── Buttons ─────────────────────────────────────────────── */
   .btn-primary {
-    @apply w-full text-sm font-semibold !text-white bg-purple-600 px-6 py-3.5 rounded-xl my-1 cursor-pointer;
-    color: #ffffff !important;
+    @apply w-full bg-purple-600 my-1 cursor-pointer;
     box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);
-    transition: transform 0.15s var(--ease-spring),
-      box-shadow 0.2s var(--ease-smooth),
-      background-color 0.2s var(--ease-smooth);
-    position: relative;
-    overflow: hidden;
   }
 
-  .btn-primary * {
+  .btn-danger {
+    @apply bg-red-600 cursor-pointer;
+    box-shadow: 0 4px 14px rgba(220, 38, 38, 0.3);
+  }
+
+  /* Solid buttons keep white text in every state, even inside nested spans/icons */
+  .btn-primary,
+  .btn-primary *,
+  .btn-danger,
+  .btn-danger *,
+  .add-btn-fill,
+  .add-btn-fill * {
     color: #ffffff !important;
   }
 
   .btn-primary:hover,
-  .btn-primary:focus {
-    color: #ffffff !important;
+  .btn-primary:focus-visible {
     transform: translateY(-1px);
     box-shadow: 0 6px 20px rgba(124, 58, 237, 0.45);
-    background-color: #6d28d9 !important;
-  }
-
-  .btn-primary:hover *,
-  .btn-primary:focus * {
-    color: #ffffff !important;
+    background-color: #6d28d9;
   }
 
   .btn-primary:active {
-    color: #ffffff !important;
-    transform: translateY(0) scale(0.98);
-    box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
-    background-color: #5b21b6 !important;
+    transform: scale(0.98);
+    background-color: #5b21b6;
+  }
+
+  .btn-danger:hover,
+  .btn-danger:focus-visible {
+    transform: translateY(-1px);
+    background-color: #b91c1c;
+  }
+
+  .btn-danger:active {
+    transform: scale(0.98);
+  }
+
+  .btn-primary:disabled,
+  .btn-danger:disabled,
+  .btn-secondary:disabled,
+  .add-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center text-sm font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 px-5 py-3 rounded-xl border border-gray-200 dark:border-gray-600 transition-all cursor-pointer;
+    @apply text-gray-700 dark:text-gray-200 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600 cursor-pointer;
   }
 
   .btn-secondary:active {
@@ -261,40 +246,15 @@
   .card {
     @apply bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04), 0 4px 20px rgba(0, 0, 0, 0.04);
-    transition: box-shadow 0.25s var(--ease-smooth),
-      transform 0.25s var(--ease-spring),
-      border-color 0.25s var(--ease-smooth),
-      background-color 0.3s var(--ease-smooth);
   }
 
-  .card:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06), 0 8px 32px rgba(0, 0, 0, 0.07);
-  }
-
-  .dark .card:hover {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3), 0 8px 32px rgba(0, 0, 0, 0.25);
-    border-color: rgba(139, 92, 246, 0.15);
-  }
-
-  /* Clickable / interactive card gets lift on hover */
   .card-interactive {
     cursor: pointer;
   }
 
-  .card-interactive:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.06);
-  }
-
-  .dark .card-interactive:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
-    border-color: rgba(139, 92, 246, 0.2);
-  }
-
   /* ── Card buttons ────────────────────────────────────────── */
   .card-btn {
-    @apply flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-700/80 px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 cursor-pointer;
+    @apply text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-700/80 border border-gray-200 dark:border-gray-600 cursor-pointer;
     transition: transform 0.15s var(--ease-spring),
       background-color 0.2s var(--ease-smooth),
       border-color 0.2s var(--ease-smooth),
@@ -314,12 +274,7 @@
 
   /* ── Add button ──────────────────────────────────────────── */
   .add-btn {
-    @apply flex items-center gap-2 text-sm font-semibold text-purple-600 dark:text-purple-300 whitespace-nowrap bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/80 rounded-xl px-5 py-2.5 cursor-pointer;
-    transition: transform 0.15s var(--ease-spring),
-      background-color 0.2s var(--ease-smooth),
-      border-color 0.2s var(--ease-smooth),
-      color 0.2s var(--ease-smooth),
-      box-shadow 0.2s var(--ease-smooth);
+    @apply whitespace-nowrap text-purple-600 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/80 cursor-pointer;
   }
 
   .add-btn:hover {
@@ -333,52 +288,21 @@
   }
 
   /* Solid filled add button (Record Bill, New Group, Add Budget, etc.) */
-  .add-btn-fill,
-  .add-btn.add-btn-fill {
-    color: #ffffff !important;
-    background-color: #7c3aed !important;
-    border-color: transparent !important;
-    box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35) !important;
-  }
-
-  .add-btn-fill *,
-  .add-btn.add-btn-fill * {
-    color: #ffffff !important;
+  .add-btn-fill {
+    background-color: #7c3aed;
+    border-color: transparent;
+    box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);
   }
 
   .add-btn-fill:hover,
-  .add-btn.add-btn-fill:hover,
-  .add-btn-fill:focus,
-  .add-btn.add-btn-fill:focus {
-    color: #ffffff !important;
-    background-color: #6d28d9 !important;
-    border-color: transparent !important;
-    box-shadow: 0 6px 20px rgba(124, 58, 237, 0.45) !important;
-    transform: translateY(-1px);
+  .add-btn-fill:focus-visible {
+    background-color: #6d28d9;
+    border-color: transparent;
+    box-shadow: 0 6px 20px rgba(124, 58, 237, 0.45);
   }
 
-  .add-btn-fill:hover *,
-  .add-btn.add-btn-fill:hover *,
-  .add-btn-fill:focus *,
-  .add-btn.add-btn-fill:focus * {
-    color: #ffffff !important;
-  }
-
-  .add-btn-fill:active,
-  .add-btn.add-btn-fill:active {
-    color: #ffffff !important;
-    background-color: #5b21b6 !important;
-    transform: scale(0.97);
-  }
-
-  /* ── Hover lift utility ──────────────────────────────────── */
-  .hover-lift {
-    transition: transform 0.25s var(--ease-spring),
-      box-shadow 0.25s var(--ease-smooth);
-  }
-
-  .hover-lift:hover {
-    transform: translateY(-3px);
+  .add-btn-fill:active {
+    background-color: #5b21b6;
   }
 
   /* ── Page enter animation ────────────────────────────────── */
@@ -487,38 +411,11 @@
     animation: fadeIn 0.3s ease both;
   }
 
-  .animate-scale-in {
-    animation: scaleIn 0.3s var(--ease-spring) both;
-  }
-
   .animate-slide-right {
     animation: slideInRight 0.35s var(--ease-spring) both;
   }
 
-  /* Delay utilities */
-  .delay-75 {
-    animation-delay: 75ms;
-  }
 
-  .delay-150 {
-    animation-delay: 150ms;
-  }
-
-  .delay-225 {
-    animation-delay: 225ms;
-  }
-
-  .delay-300 {
-    animation-delay: 300ms;
-  }
-
-  .delay-375 {
-    animation-delay: 375ms;
-  }
-
-  .delay-450 {
-    animation-delay: 450ms;
-  }
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -527,16 +424,6 @@
 @layer components {
   .page-title {
     @apply text-2xl md:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white;
-  }
-
-  .glass-bar {
-    @apply bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm;
-  }
-
-  .brand-mark {
-    @apply w-9 h-9 rounded-xl flex items-center justify-center text-white font-extrabold text-lg;
-    background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 60%, #ec4899 140%);
-    box-shadow: 0 6px 16px rgba(124, 58, 237, 0.35);
   }
 
   .hero-card {
@@ -569,9 +456,8 @@
   }
 
   .hero-btn {
-    @apply inline-flex items-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-xl bg-white/15 text-white border border-white/25 cursor-pointer;
+    @apply bg-white/15 text-white border border-white/25 cursor-pointer;
     backdrop-filter: blur(6px);
-    transition: background-color 0.2s var(--ease-smooth), transform 0.15s var(--ease-spring);
   }
 
   .hero-btn:hover {
@@ -650,6 +536,31 @@
     @apply text-[13px] font-semibold text-gray-700 dark:text-gray-300;
   }
 
+  /* Stat cards: a swipeable row on phones, a grid from sm up */
+  .stat-grid {
+    @apply flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:pb-0 sm:grid sm:overflow-visible;
+  }
+
+  .stat-grid {
+    scrollbar-width: none;
+  }
+
+  .stat-grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .stat-grid > * {
+    @apply w-[85vw] shrink-0 snap-center sm:w-auto sm:shrink;
+  }
+
+  .stat-grid-3 {
+    @apply sm:grid-cols-2 lg:grid-cols-3;
+  }
+
+  .stat-grid-4 {
+    @apply sm:grid-cols-2 xl:grid-cols-4;
+  }
+
   .field-error {
     @apply text-xs text-red-500 -mt-3 mb-3;
   }
@@ -663,5 +574,51 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+@layer utilities {
+  .text-gray-400 {
+    color: #64748b;
+  }
+
+  .text-gray-500,
+  .text-gray-600 {
+    color: #475569;
+  }
+
+  .dark .text-gray-400:not([class*="dark:text-gray-"]),
+  .dark .text-gray-500:not([class*="dark:text-gray-"]),
+  .dark .text-gray-600:not([class*="dark:text-gray-"]) {
+    color: #cbd5e1;
+  }
+
+  .text-xs {
+    font-size: 0.8125rem;
+    line-height: 1.25rem;
+  }
+}
+
+@layer components {
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger,
+  .add-btn,
+  .card-btn,
+  .hero-btn {
+    @apply inline-flex items-center justify-center;
+    min-height: var(--button-min-height);
+    padding: var(--button-padding-block) var(--button-padding-inline);
+    gap: var(--button-gap);
+    border-radius: var(--button-radius);
+    font-size: var(--button-font-size);
+    font-weight: var(--button-font-weight);
+    line-height: var(--button-line-height);
+    transition:
+      color 0.2s var(--ease-smooth),
+      background-color 0.2s var(--ease-smooth),
+      border-color 0.2s var(--ease-smooth),
+      box-shadow 0.2s var(--ease-smooth),
+      transform 0.15s var(--ease-spring);
   }
 }

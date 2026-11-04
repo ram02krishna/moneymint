@@ -2,6 +2,8 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 
+const RESET_EXPIRY_MINUTES = 10;
+
 const UserSchema = new mongoose.Schema(
   {
     fullName: { type: String, required: true },
@@ -17,6 +19,7 @@ const UserSchema = new mongoose.Schema(
     profileImageUrl: { type: String, default: null },
     resetPasswordToken: String,
     resetPasswordExpire: Date,
+    resetPasswordAttempts: { type: Number, default: 0 },
   },
   {
     timestamps: true,
@@ -26,6 +29,7 @@ const UserSchema = new mongoose.Schema(
         delete ret.password;
         delete ret.resetPasswordToken;
         delete ret.resetPasswordExpire;
+        delete ret.resetPasswordAttempts;
         return ret;
       },
     },
@@ -48,8 +52,8 @@ UserSchema.methods.comparePassword = async function (candidatePassword) {
 
 // Generate and hash password token
 UserSchema.methods.getResetPasswordToken = function () {
-  // Generate 6-digit OTP
-  const resetToken = Math.floor(100000 + Math.random() * 900000).toString();
+  // Cryptographically secure 6-digit OTP
+  const resetToken = crypto.randomInt(100000, 1000000).toString();
 
   // Hash token and set to resetPasswordToken field
   this.resetPasswordToken = crypto
@@ -58,9 +62,11 @@ UserSchema.methods.getResetPasswordToken = function () {
     .digest("hex");
 
   // Set expire to 10 minutes
-  this.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
+  this.resetPasswordExpire = Date.now() + RESET_EXPIRY_MINUTES * 60 * 1000;
+  this.resetPasswordAttempts = 0;
 
   return resetToken;
 };
 
 module.exports = mongoose.model("User", UserSchema);
+module.exports.RESET_EXPIRY_MINUTES = RESET_EXPIRY_MINUTES;

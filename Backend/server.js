@@ -9,6 +9,7 @@ const rateLimit = require("express-rate-limit");
 
 // my files
 const connectDB = require("./config/db");
+const { corsOptions } = require("./config/cors");
 const authRoutes = require("./routes/authRoutes");
 const expenseRoutes = require("./routes/expenseRoutes");
 const incomeRoutes = require("./routes/incomeRoutes");
@@ -18,7 +19,7 @@ const transactionRoutes = require("./routes/transactionRoutes");
 const goalRoutes = require("./routes/goalRoutes");
 const splitRoutes = require("./routes/splitRoutes");
 const globalErrorHandler = require("./middleware/errorMiddleware");
-const { sanitizeMongoParams } = require("./middleware/validationMiddleware");
+const AppError = require("./utils/AppError");
 const connectDBMiddleware = require("./middleware/connectDBMiddleware");
 
 const app = express();
@@ -31,38 +32,6 @@ app.use(
     crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
   }),
 );
-
-// CORS setup
-let defaultAllowedOrigins = [
-  "http://localhost:5173",
-  "http://localhost:5174",
-  "https://expense-tracker-omega-wine.vercel.app",
-];
-if (process.env.CLIENT_URL) {
-  defaultAllowedOrigins.push(
-    ...process.env.CLIENT_URL.split(",").map((url) => url.trim()),
-  );
-}
-
-const corsOptions = {
-  origin: (origin, callback) => {
-    // allow if no origin (e.g. mobile apps, curl)
-    if (!origin) return callback(null, true);
-
-    if (
-      defaultAllowedOrigins.indexOf(origin) !== -1 ||
-      origin.endsWith(".vercel.app")
-    ) {
-      callback(null, true);
-    } else {
-      console.error(`CORS error: ${origin} not allowed`);
-      callback(null, false);
-    }
-  },
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-CSRF-Token", "Accept"],
-  credentials: true,
-};
 
 app.use(cors(corsOptions));
 
@@ -88,7 +57,7 @@ const authLimiter = rateLimit({
 // upload rate limiter
 const imgLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 1000,
+  max: 30,
   message: "Too many uploads.",
   standardHeaders: true,
   legacyHeaders: false,
@@ -98,7 +67,8 @@ app.set("trust proxy", 1);
 app.use((req, res, next) => {
   if (
     req.path.startsWith("/api/v1/auth/login") ||
-    req.path.startsWith("/api/v1/auth/register") ||
+    req.path.startsWith("/api/v1/auth/forgot-password") ||
+    req.path.startsWith("/api/v1/auth/reset-password") ||
     req.path.startsWith("/api/v1/auth/google") ||
     req.path.startsWith("/api/v1/auth/send-signup-otp") ||
     req.path.startsWith("/api/v1/auth/resend-signup-otp") ||
@@ -114,7 +84,6 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 app.use(connectDBMiddleware);
-app.use(sanitizeMongoParams);
 
 // testing route
 app.get("/", (req, res) => {
@@ -131,6 +100,11 @@ app.use("/api/v1/transactions", transactionRoutes);
 app.use("/api/v1/goals", goalRoutes);
 app.use("/api/v1/split", splitRoutes);
 
+// anything that reached this point matched no route
+app.use((req, res, next) => {
+  next(new AppError(`Route not found: ${req.method} ${req.originalUrl}`, 404));
+});
+
 // errors handled here
 app.use(globalErrorHandler);
 
@@ -139,7 +113,7 @@ module.exports = app;
 const runServer = async () => {
   try {
     await connectDB(); // connect database
-    let myPort = process.env.PORT || 5000;
+    const myPort = process.env.PORT || 5000;
 
     // start listening
     if (require.main === module) {

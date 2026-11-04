@@ -1,19 +1,13 @@
-import React, { useState, useEffect } from "react";
-import {
-  LuUser,
-  LuHandCoins,
-  LuReceipt,
-  LuCalendar,
-  LuTrash2,
-  LuCircleCheck,
-} from "react-icons/lu";
+import { formatCurrency, emojiFor } from "../../utils/helper";
+import { useState, useEffect } from "react";
+import { LuHandCoins, LuReceipt, LuTrash2 } from "react-icons/lu";
 import Modal from "../layouts/Modal";
 import CharAvatar from "../Cards/CharAvatar";
 import EmptyState from "../ui/EmptyState";
 import LoadingSpinner from "../LoadingSpinner";
 import axiosInstance from "../../utils/axiosInstance";
 import { API_PATHS } from "../../utils/apiPath";
-import { formatCurrency, emojiFor } from "../../utils/splitHelper";
+import { useConfirm } from "../../hooks/useConfirm";
 
 const FriendDetailModal = ({
   isOpen,
@@ -22,6 +16,7 @@ const FriendDetailModal = ({
   onSettleUp,
   onDeleteFriend,
 }) => {
+  const confirm = useConfirm();
   const [loading, setLoading] = useState(true);
   const [friendData, setFriendData] = useState(null);
   const [activeTab, setActiveTab] = useState("expenses"); // "expenses" or "settlements"
@@ -123,7 +118,7 @@ const FriendDetailModal = ({
                   onClose();
                   onSettleUp(currentFriend, balance);
                 }}
-                className="add-btn add-btn-fill text-xs py-1.5 px-3.5 mt-2.5 inline-flex items-center gap-1.5"
+                className="add-btn add-btn-fill mt-2.5"
               >
                 <LuHandCoins className="text-sm" /> Settle Up
               </button>
@@ -252,11 +247,13 @@ const FriendDetailModal = ({
         <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-700">
           <button
             type="button"
-            onClick={() => {
+            onClick={async () => {
               if (
-                window.confirm(
-                  `Are you sure you want to remove ${currentFriend.name} from friends?`,
-                )
+                await confirm({
+                  title: "Remove friend?",
+                  message: `${currentFriend.name} will be removed from your friends list.`,
+                  confirmLabel: "Remove",
+                })
               ) {
                 onDeleteFriend(currentFriend._id);
                 onClose();
@@ -270,7 +267,7 @@ const FriendDetailModal = ({
           <button
             type="button"
             onClick={onClose}
-            className="btn-secondary py-2 px-6"
+            className="btn-secondary"
           >
             Close
           </button>
@@ -281,4 +278,3 @@ const FriendDetailModal = ({
 };
 
 export default FriendDetailModal;
-
