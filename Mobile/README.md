@@ -15,7 +15,7 @@ Full parity with the web app:
 
 ## 1. Backend Connectivity & Environment
 By default, the app connects to the live production backend:
-`https://money-mint-backend.vercel.app`
+`https://moneymint-backend.vercel.app`
 
 This allows the app to work seamlessly as a standalone APK on any Wi-Fi or mobile data network.
 
@@ -26,7 +26,7 @@ cp .env.example .env      # edit EXPO_PUBLIC_API_URL
 ```
 | Where you run it                | `EXPO_PUBLIC_API_URL`                          |
 |---------------------------------|------------------------------------------------|
-| Standalone APK / Mobile Data    | `https://money-mint-backend.vercel.app` (default) |
+| Standalone APK / Mobile Data    | `https://moneymint-backend.vercel.app` (default) |
 | Android emulator, local backend | `http://10.0.2.2:5000`                         |
 | Real phone, local backend       | `http://<your-PC-LAN-IP>:5000` (same Wi-Fi, port 5000 allowed in firewall) |
 
@@ -41,7 +41,7 @@ npx expo start
 Scan the QR code with **Expo Go** on your phone, or press `a` to open an Android emulator.
 
 ## 3. Build & Rebuild an Installable Standalone APK
-The app is configured to connect to the deployed production backend (`https://money-mint-backend.vercel.app`), so it works on any Wi-Fi or mobile data network without Expo Go or a computer running.
+The app is configured to connect to the deployed production backend (`https://moneymint-backend.vercel.app`), so it works on any Wi-Fi or mobile data network without Expo Go or a computer running.
 
 ### A. First-Time Setup (One Time Only)
 If you haven't linked your project or logged in yet:
@@ -52,7 +52,7 @@ npx eas-cli login
 # 2. Link your project on EAS (only needed the very first time)
 npx eas-cli init
 ```
-*(Note: Your project is already linked with project ID `609eb442-258e-4859-9d8c-c7ded7872d05`. You do not need to run `eas init` again).*
+The EAS project is currently unlinked in `app.json`. Run `eas init` to link an existing project or create one under the intended Expo account.
 
 ---
 

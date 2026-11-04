@@ -18,7 +18,8 @@
       "allowBackup": false,
       "usesCleartextTraffic": false,
       "permissions": [
-        "android.permission.INTERNET"
+        "android.permission.INTERNET",
+        "android.permission.RECORD_AUDIO"
       ],
       "adaptiveIcon": {
         "backgroundColor": "#4f46e5",
@@ -44,7 +45,7 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "609eb442-258e-4859-9d8c-c7ded7872d05"
+        "projectId": "f044282f-b62a-4daf-95d7-1afd8c79a75d"
       }
     },
     "owner": "ram02krishna"
