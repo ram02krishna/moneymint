@@ -10,6 +10,8 @@ Full parity with the web app:
 - **Monthly Analytics tab:** income/expense totals, expense-by-category and income-by-source donuts, 12-month trends (income vs expense line chart, savings and transaction bars), averages, highest-spend/income month and month-over-month change
 - **One-tap month picker:** tap the month name on any screen, then tap a month (or tap the year to jump to any year). Arrows still step one month
 - **Transactions:** All / Income / Expense filters, search, infinite scroll, add / edit / delete, totals, **Excel and PDF export**
+- **Split expenses:** create groups, add friends and shared expenses, and record settlements
+- **Consistent buttons:** app buttons share a 48dp minimum height; split-expense quick actions use matching primary styling and sizing
 - **Budgets** and **Savings goals** (More tab → Savings goals)
 - **More tab:** Income, Expenses, Goals shortcuts, edit profile, **profile photo upload**, change password, dark mode, log out
 

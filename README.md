@@ -44,7 +44,8 @@ It's basically an app where you can log your income and expenses, set budgets fo
 
 ### Android app (new)
 - `Mobile/` is a React Native (Expo) app that uses the **same backend** as the web app
-- Includes dashboard charts, Monthly Analytics with 12-month trends, one-tap month picker, search, Excel/PDF export and profile photo upload
+- Includes dashboard charts, Monthly Analytics with 12-month trends, one-tap month picker, search, Excel/PDF export, profile photo upload and split expenses
+- Android buttons use a consistent minimum height; split-expense quick actions share the same primary style and size
 - See `Mobile/README.md` for setup and APK build steps
 
 ### UI

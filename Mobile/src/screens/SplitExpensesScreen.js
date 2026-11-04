@@ -581,10 +581,10 @@ export default function SplitExpensesScreen({ navigation }) {
 
   const topBarActions = (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 12 }}>
-      <Button title="Add expense" icon="add" onPress={() => openNewExpense()} />
-      <Button title="Settle up" icon="cash-outline" variant="soft" onPress={() => openSettlement()} />
-      <Button title="New group" icon="people-outline" variant="ghost" onPress={() => openGroupForm()} />
-      <Button title="Add friend" icon="person-add-outline" variant="ghost" onPress={() => { setFriendMode("search"); setFriendOpen(true); }} />
+      <Button title="Add expense" icon="add" onPress={() => openNewExpense()} style={{ width: 140 }} />
+      <Button title="Settle up" icon="cash-outline" onPress={() => openSettlement()} style={{ width: 140 }} />
+      <Button title="New group" icon="people-outline" onPress={() => openGroupForm()} style={{ width: 140 }} />
+      <Button title="Add friend" icon="person-add-outline" onPress={() => { setFriendMode("search"); setFriendOpen(true); }} style={{ width: 140 }} />
     </ScrollView>
   );
 
@@ -607,7 +607,7 @@ export default function SplitExpensesScreen({ navigation }) {
         </View>
         <View style={{ flexDirection: "row", gap: 8, marginBottom: 12 }}>
           <Button title="Add expense" icon="add" onPress={() => openNewExpense(group._id)} style={{ flex: 1 }} />
-          <Button title="Settle up" icon="cash-outline" variant="soft" onPress={() => openSettlement({ group })} style={{ flex: 1 }} />
+          <Button title="Settle up" icon="cash-outline" onPress={() => openSettlement({ group })} style={{ flex: 1 }} />
         </View>
         <View style={{ flexDirection: "row", gap: 5, marginBottom: 14 }}>
           {["expenses", "members", "settlements", "debts"].map((tab) => <Chip key={tab} label={tab[0].toUpperCase() + tab.slice(1)} selected={activeTab === `group-${tab}`} onPress={() => setActiveTab(`group-${tab}`)} />)}
