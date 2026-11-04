@@ -14,7 +14,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://money-mint-backend.vercel.app"
+        "EXPO_PUBLIC_API_URL": "https://moneymint-backend.vercel.app"
       }
     },
     "production-apk": {
@@ -23,7 +23,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://money-mint-backend.vercel.app"
+        "EXPO_PUBLIC_API_URL": "https://moneymint-backend.vercel.app"
       }
     },
     "production": {
@@ -31,7 +31,7 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://money-mint-backend.vercel.app"
+        "EXPO_PUBLIC_API_URL": "https://moneymint-backend.vercel.app"
       }
     }
   },

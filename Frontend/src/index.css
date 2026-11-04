@@ -587,9 +587,9 @@
     color: #475569;
   }
 
-  .dark .text-gray-400:not([class*="dark:text-gray-"]),
-  .dark .text-gray-500:not([class*="dark:text-gray-"]),
-  .dark .text-gray-600:not([class*="dark:text-gray-"]) {
+  .dark .text-gray-400,
+  .dark .text-gray-500,
+  .dark .text-gray-600 {
     color: #cbd5e1;
   }
 
