@@ -138,6 +138,8 @@ export default function MoreScreen({ navigation }) {
         <Divider />
         <Row icon="trophy-outline" label="Savings goals" hint="Track what you're saving for" onPress={() => navigation.navigate("Goals")} />
         <Divider />
+        <Row icon="people-outline" label="Split Expenses" hint="Share bills and settle up with friends" onPress={() => navigation.navigate("SplitExpenses")} />
+        <Divider />
       </Card>
 
       <Text style={{ color: colors.sub, fontWeight: "700", fontSize: 12, marginBottom: 6, marginLeft: 4 }}>ACCOUNT</Text>

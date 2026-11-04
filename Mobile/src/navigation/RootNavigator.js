@@ -15,6 +15,7 @@ import BudgetsScreen from "../screens/BudgetsScreen";
 import GoalsScreen from "../screens/GoalsScreen";
 import AnalyticsScreen from "../screens/AnalyticsScreen";
 import MoreScreen from "../screens/MoreScreen";
+import SplitExpensesScreen from "../screens/SplitExpensesScreen";
 
 const Stack = createNativeStackNavigator();
 const Tabs = createBottomTabNavigator();
@@ -33,6 +34,7 @@ const MoreNavigator = () => {
     <MoreStack.Navigator screenOptions={{ headerShown: false, animation: "slide_from_right" }}>
       <MoreStack.Screen name="MoreMain" component={MoreScreen} />
       <MoreStack.Screen name="Goals" component={GoalsScreen} />
+      <MoreStack.Screen name="SplitExpenses" component={SplitExpensesScreen} />
     </MoreStack.Navigator>
   );
 };
